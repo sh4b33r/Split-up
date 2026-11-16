@@ -67,7 +67,7 @@ export async function notify(uids: string[], notice: Notice): Promise<void> {
         tokens: chunk.map((o) => o.token),
         notification: { title: notice.title, body: notice.body },
         data,
-        android: { priority: 'high', notification: { channelId: 'splits' } },
+        android: { priority: 'high' },
         apns: { payload: { aps: { sound: 'default' } } },
       });
       const cleanup = db.batch();
