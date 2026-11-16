@@ -56,11 +56,13 @@ class RoomView extends StatelessWidget {
             title: Obx(() {
               final room = c.room.value;
               if (room == null) return const SizedBox.shrink();
-              return Row(children: [
-                Text(room.icon, style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 10),
-                Flexible(child: Text(room.name, overflow: TextOverflow.ellipsis)),
-              ]);
+              return Row(
+                children: [
+                  Text(room.icon, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  Flexible(child: Text(room.name, overflow: TextOverflow.ellipsis)),
+                ],
+              );
             }),
             actions: [
               IconButton(
@@ -73,55 +75,65 @@ class RoomView extends StatelessWidget {
                 icon: const Icon(Icons.history),
                 onPressed: () => Get.toNamed(Routes.activity(roomId)),
               ),
-              Obx(() => IconButton(
-                    tooltip: 'Room settings',
-                    icon: Badge(
-                      isLabelVisible: c.isManager && c.requestCount.value > 0,
-                      label: Text('${c.requestCount.value}'),
-                      child: const Icon(Icons.group_outlined),
-                    ),
-                    onPressed: () => Get.toNamed(Routes.roomSettings(roomId)),
-                  )),
+              Obx(
+                () => IconButton(
+                  tooltip: 'Room settings',
+                  icon: Badge(
+                    isLabelVisible: c.isManager && c.requestCount.value > 0,
+                    label: Text('${c.requestCount.value}'),
+                    child: const Icon(Icons.group_outlined),
+                  ),
+                  onPressed: () => Get.toNamed(Routes.roomSettings(roomId)),
+                ),
+              ),
               const SizedBox(width: 4),
             ],
           ),
           body: SafeArea(
             child: Narrow(
-              child: Column(children: [
-                _Balances(c: c),
-                Obx(() => TabBar(tabs: [
-                      Tab(text: 'Unpaid (${c.open.length})'),
-                      Tab(text: 'Settled (${c.settled.length})'),
-                    ])),
-                Expanded(
-                  child: Obx(() {
-                    c.members.length; // names on the cards update when members load
-                    if (!c.loaded.value) return const Center(child: CircularProgressIndicator());
-                    return TabBarView(children: [
-                      _SplitList(
-                        c: c,
-                        splits: c.open,
-                        empty: EmptyState(
-                          icon: c.splits.isEmpty ? Icons.receipt_long_outlined : Icons.celebration_outlined,
-                          title: c.splits.isEmpty ? 'No bills yet' : 'All settled up',
-                          message: c.splits.isEmpty
-                              ? 'Add the first bill and everyone in the room will see what they owe.'
-                              : 'Nobody owes anything in this room right now.',
-                        ),
-                      ),
-                      _SplitList(
-                        c: c,
-                        splits: c.settled,
-                        empty: const EmptyState(
-                          icon: Icons.task_alt,
-                          title: 'Nothing settled yet',
-                          message: 'A bill moves here once everyone has paid their share.',
-                        ),
-                      ),
-                    ]);
-                  }),
-                ),
-              ]),
+              child: Column(
+                children: [
+                  _Balances(c: c),
+                  Obx(
+                    () => TabBar(
+                      tabs: [
+                        Tab(text: 'Unpaid (${c.open.length})'),
+                        Tab(text: 'Settled (${c.settled.length})'),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Obx(() {
+                      c.members.length; // names on the cards update when members load
+                      if (!c.loaded.value) return const Center(child: CircularProgressIndicator());
+                      return TabBarView(
+                        children: [
+                          _SplitList(
+                            c: c,
+                            splits: c.open,
+                            empty: EmptyState(
+                              icon: c.splits.isEmpty ? Icons.receipt_long_outlined : Icons.celebration_outlined,
+                              title: c.splits.isEmpty ? 'No bills yet' : 'All settled up',
+                              message: c.splits.isEmpty
+                                  ? 'Add the first bill and everyone in the room will see what they owe.'
+                                  : 'Nobody owes anything in this room right now.',
+                            ),
+                          ),
+                          _SplitList(
+                            c: c,
+                            splits: c.settled,
+                            empty: const EmptyState(
+                              icon: Icons.task_alt,
+                              title: 'Nothing settled yet',
+                              message: 'A bill moves here once everyone has paid their share.',
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ),
+                ],
+              ),
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -167,26 +179,29 @@ class _Balances extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Avatar(name: m.displayName, photoUrl: m.photoUrl, radius: 17),
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(c.nameOf(m.uid), style: theme.textTheme.labelLarge),
-                    Text(
-                      net == 0 ? 'settled' : (net > 0 ? 'gets back' : (m.uid == c.uid ? 'owe' : 'owes')),
-                      style: theme.textTheme.labelSmall?.copyWith(color: color),
-                    ),
-                    if (net != 0)
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Avatar(name: m.displayName, photoUrl: m.photoUrl, radius: 17),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(c.nameOf(m.uid), style: theme.textTheme.labelLarge),
                       Text(
-                        Money.format(net.abs(), c.currency),
-                        style: theme.textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w700),
+                        net == 0 ? 'settled' : (net > 0 ? 'gets back' : (m.uid == c.uid ? 'owe' : 'owes')),
+                        style: theme.textTheme.labelSmall?.copyWith(color: color),
                       ),
-                  ],
-                ),
-              ]),
+                      if (net != 0)
+                        Text(
+                          Money.format(net.abs(), c.currency),
+                          style: theme.textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w700),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -254,74 +269,101 @@ class SplitCard extends StatelessWidget {
     final total = split.shareSummary.length;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Get.toNamed(Routes.split(split.roomId, split.id)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Flexible(
-                      child: Text(split.label, style: theme.textTheme.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                    if (split.isRecurring)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Icon(Icons.event_repeat, size: 16, color: muted, semanticLabel: 'Monthly'),
+      child: Semantics(
+        button: true,
+        container: true,
+        child: InkWell(
+          onTap: () => Get.toNamed(Routes.split(split.roomId, split.id)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  split.label,
+                                  style: theme.textTheme.titleMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (split.isRecurring)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: Icon(Icons.event_repeat, size: 16, color: muted, semanticLabel: 'Monthly'),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Paid by ${c.nameOf(split.paidBy)}',
+                            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                          ),
+                        ],
                       ),
-                  ]),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Paid by ${c.nameOf(split.paidBy)}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      Money.format(split.totalMinor, split.currency),
+                      style: theme.textTheme.titleMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ExcludeSemantics(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: total == 0 ? 0 : split.paidCount / total,
+                      minHeight: 5,
+                      color: colors.owed,
+                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    ),
                   ),
-                ]),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                Money.format(split.totalMinor, split.currency),
-                style: theme.textTheme.titleMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: total == 0 ? 0 : split.paidCount / total,
-                minHeight: 5,
-                color: colors.owed,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                child: Text(
-                  myLine,
-                  style: theme.textTheme.labelLarge?.copyWith(color: myColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (toConfirm > 0) ...[
-                StatusChip(
-                  label: '$toConfirm to confirm',
-                  color: colors.pending,
-                  background: colors.pendingContainer,
-                  icon: Icons.hourglass_top,
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        myLine,
+                        style: theme.textTheme.labelLarge?.copyWith(color: myColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (toConfirm > 0) ...[
+                      StatusChip(
+                        label: '$toConfirm to confirm',
+                        color: colors.pending,
+                        background: colors.pendingContainer,
+                        icon: Icons.hourglass_top,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    if (split.isOverdue)
+                      StatusChip.overdue(context)
+                    else if (!split.settled && split.dueDate != null)
+                      StatusChip.neutral(context, 'Due ${Dates.short(split.dueDate!)}', icon: Icons.event)
+                    else
+                      Text(
+                        '${split.paidCount} of $total paid',
+                        style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 6),
               ],
-              if (split.isOverdue)
-                StatusChip.overdue(context)
-              else if (!split.settled && split.dueDate != null)
-                StatusChip.neutral(context, 'Due ${Dates.short(split.dueDate!)}', icon: Icons.event)
-              else
-                Text('${split.paidCount} of $total paid', style: theme.textTheme.labelSmall?.copyWith(color: muted)),
-            ]),
-          ]),
+            ),
+          ),
         ),
       ),
     );

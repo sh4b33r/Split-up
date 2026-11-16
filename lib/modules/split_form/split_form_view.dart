@@ -331,6 +331,7 @@ class SplitFormView extends StatelessWidget {
         ),
         bottomNavigationBar: SafeArea(
           child: Narrow(
+            shrink: true,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Obx(() => BusyButton(

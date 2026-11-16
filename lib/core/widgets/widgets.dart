@@ -279,13 +279,17 @@ class BusyButton extends StatelessWidget {
 
 /// Keeps content readable on tablets and the web.
 class Narrow extends StatelessWidget {
-  const Narrow({super.key, required this.child, this.maxWidth = 640});
+  const Narrow({super.key, required this.child, this.maxWidth = 640, this.shrink = false});
   final Widget child;
   final double maxWidth;
+
+  /// Only as tall as [child], for bottom bars.
+  final bool shrink;
 
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
+        heightFactor: shrink ? 1 : null,
         child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
       );
 }

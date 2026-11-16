@@ -7,7 +7,28 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Splitup</string>
+	<string>SplitRoom</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>invite</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>splitup</string>
+			</array>
+		</dict>
+	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo of a receipt or a payment confirmation.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach a receipt or a payment screenshot to a bill.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

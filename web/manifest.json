@@ -1,11 +1,11 @@
 {
-    "name": "splitup",
-    "short_name": "splitup",
+    "name": "SplitRoom",
+    "short_name": "SplitRoom",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F6F7F3",
+    "theme_color": "#0B6E4F",
+    "description": "Share a room, split the bills, see who owes whom.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
