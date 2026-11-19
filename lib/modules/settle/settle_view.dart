@@ -141,8 +141,8 @@ class SettleView extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
                       child: Text(
-                        'If everyone paid these ${plan.length} ${plan.length == 1 ? 'payment' : 'payments'}, the whole room '
-                        'would be settled. Settle up above to record what you pay or receive.',
+                        '${plan.length == 1 ? 'If this one payment were made' : 'If everyone made these ${plan.length} payments'}, '
+                        'the whole room would be settled. Settle up above to record what you pay or receive.',
                         style: Theme.of(context).textTheme.bodySmall
                             ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),

@@ -336,7 +336,7 @@ class _Header extends StatelessWidget {
                       onPressed: () => Get.toNamed(Routes.settle(c.roomId)),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: theme.colorScheme.primary,
+                        foregroundColor: const Color(0xFF0B6E4F), // brand green: readable on white in both themes
                         minimumSize: const Size(0, 46),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                       ),

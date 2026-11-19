@@ -15,15 +15,26 @@ date.
 
 | Area | Features |
 | --- | --- |
-| Account | Email + password, Google, Apple; profile name, photo, phone; email verification |
+| Account | **No-password sign-in**: Google (name and photo filled in, no profile step) or an emailed one-tap sign-in link; Apple on iPhone and web; email + password still available; profile name, photo, phone |
 | Rooms | Create (name, currency, icon); unique code without look-alike characters; share invite link; invite by email (waits for people who haven't signed up); approve new members; admins; transfer ownership; remove, leave; reset code and link |
 | Splits | Equal, exact amounts, percentages, shares (2:1:1) with a live per-person preview; paid by anyone; due date; note; receipt photo; edit and delete with the permission rules below |
 | Payments | "I've paid" with method, note and proof photo; payer confirms or rejects with a reason; mark paid directly for cash; undo; split shows Settled when everyone has paid |
-| Monthly bills | Repeat on day 1–28 or the last day, due N days later, optional end month; pause, resume, end; a re-run of the job never creates a duplicate |
+| Monthly bills | Repeat on day 1–28 or the last day, due N days later, optional end month; pause, resume, skip next month, change the amount, end; a re-run of the job never creates a duplicate |
 | Reminders | 2 days before, on the due date, then every 3 days while overdue |
 | Balances | Net balance per member in every room; "You owe" / "You're owed" totals across all rooms on Home |
+| Settle up | Per person: pay everything you owe them in one go (they confirm), or mark everything they owe you as received; "Confirm all"; plus the fewest-payments plan for the whole room |
+| Comments | A comment thread on every bill; everyone on the bill is notified |
+| Find & export | Search bills, filter (you owe / owed to you / overdue / monthly), export the room to CSV |
+| Stats | Spending per month (last 6 months), your share, who paid the most |
+| Monthly summary | On the 1st, everyone gets last month's totals for each room |
 | Log | Room activity log and per-split history |
 | Notifications | Push (FCM) plus an in-app inbox; tapping opens the split |
+
+**Design.** Plus Jakarta Sans (bundled, works offline), light and dark themes,
+gradient balance cards, amounts that count up, staggered list entrances, press
+feedback, room icons and amounts that fly between screens, skeleton loaders and
+confetti when everything is settled. All motion switches off when the phone's
+"reduce motion" setting is on.
 
 **Money is never a floating-point number.** Every amount is an integer in minor
 units (1 QAR = 100 dirhams). Rounding leftovers go one unit at a time to the
@@ -106,19 +117,29 @@ cd functions && npm test
 cd functions && npm run test:e2e
 ```
 
-`test:e2e` starts the emulators and runs 18 scenarios through the real
+`test:e2e` starts the emulators and runs 19 scenarios through the real
 callable functions: joining, approvals, every split type, I've paid → reject →
 confirm, two confirmations at once, mark paid directly, undo, edit and delete
 rules, monthly bills (including a re-run creating nothing), reminders, leaving,
-email invites before and after sign-up, roles, resetting the code, and
-rejecting signed-out calls.
+email invites before and after sign-up, roles, resetting the code, settle up
+and confirm all, comments, skipping a month and changing a monthly amount,
+the monthly summary, and rejecting signed-out calls.
 
 ## Connect it to the Firebase project
 
 1. **Plan.** Cloud Functions and scheduled jobs need the **Blaze** (pay as you
    go) plan. At small-group scale this normally stays within the free quota.
-2. **Authentication → Sign-in method:** enable Email/Password, Google and
-   Apple.
+2. **Authentication → Sign-in method:**
+   - **Email/Password**, and inside it turn on **Email link (passwordless
+     sign-in)**: this is the "Email me a sign-in link" button.
+   - **Google**: add the SHA-1 and SHA-256 of your Android signing keys to the
+     Android app in Project settings (`cd android && ./gradlew signingReport`),
+     then re-run `flutterfire configure` so the Google client IDs are in the
+     app. On iOS, add the `REVERSED_CLIENT_ID` from `GoogleService-Info.plist`
+     as a URL scheme in Xcode.
+   - **Apple** (needed on iPhone if you offer Google).
+   - Under **Settings → Authorized domains**, keep `split-up-cd996.web.app`
+     (sign-in links open through it).
 3. **Firestore Database:** create it (production mode). Pick a region close to
    your users, for example `me-central1` (Doha) or `europe-west1`.
 4. **Storage:** create the default bucket.
@@ -176,7 +197,8 @@ files).
 - Functions region: `REGION` in `functions/src/config.ts` and
   `AppConfig.functionsRegion` in `lib/app/app_config.dart`.
 
-## Not built yet (V2 ideas from the plan)
+## Not built yet
 
-Simplify debts / settle up across splits, skip one month of a monthly bill,
-comments on a split, CSV/PDF export, monthly summary email, search and filters.
+PDF export and a monthly summary *email* (the summary is sent in-app and as a
+push notification). Settle up records payments between two people; the
+"fewest payments" plan for the whole room is shown as a suggestion.

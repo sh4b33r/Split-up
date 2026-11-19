@@ -372,9 +372,12 @@ class _Start extends GetView<AuthController> {
           children: [
             Icon(Icons.lock_open_rounded, size: 14, color: muted),
             const SizedBox(width: 6),
-            Text(
-              'No password needed. Works for new and existing accounts.',
-              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            Flexible(
+              child: Text(
+                'No password needed. Works for new and existing accounts.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
             ),
           ],
         ),

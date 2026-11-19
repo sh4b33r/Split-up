@@ -256,7 +256,8 @@ class Confetti {
   static void burst(BuildContext context) {
     HapticFeedback.mediumImpact();
     if (reduceMotion(context)) return;
-    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    // Get.context sits above the Navigator's overlay, so use the navigator's own.
+    final overlay = Overlay.maybeOf(context, rootOverlay: true) ?? Get.key.currentState?.overlay;
     if (overlay == null) return;
     late OverlayEntry entry;
     entry = OverlayEntry(
