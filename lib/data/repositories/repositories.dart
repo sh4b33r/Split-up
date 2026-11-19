@@ -52,6 +52,13 @@ class SplitRepo {
       .snapshots()
       .map((s) => s.docs.map(Split.fromDoc).toList());
 
+  Stream<List<Comment>> comments(String roomId, String splitId) => _db
+      .collection('rooms/$roomId/splits/$splitId/comments')
+      .orderBy('createdAt')
+      .limitToLast(200)
+      .snapshots()
+      .map((s) => s.docs.map(Comment.fromDoc).toList());
+
   Stream<Split?> split(String roomId, String splitId) => _db
       .doc('rooms/$roomId/splits/$splitId')
       .snapshots()

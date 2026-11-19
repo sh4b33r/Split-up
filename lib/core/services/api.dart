@@ -173,6 +173,45 @@ class Api extends GetxService {
   Future<void> endRule(String roomId, String ruleId) =>
       _call('updateRule', {'roomId': roomId, 'ruleId': ruleId, 'end': true});
 
+  /// Skip (or stop skipping) the next month of a monthly bill.
+  Future<void> skipRule(String roomId, String ruleId, {required bool skip}) =>
+      _call('updateRule', {'roomId': roomId, 'ruleId': ruleId, 'skip': skip});
+
+  /// A new amount for the months still to come.
+  Future<void> updateRuleAmount(
+    String roomId,
+    String ruleId, {
+    required int totalMinor,
+    required SplitType type,
+    required List<ParticipantInput> participants,
+  }) =>
+      _call('updateRule', {
+        'roomId': roomId,
+        'ruleId': ruleId,
+        'totalMinor': totalMinor,
+        'splitType': type.id,
+        'participants': [
+          for (final p in participants) {'uid': p.uid, if (type != SplitType.equal) 'value': p.value},
+        ],
+      });
+
+  // ---- settle up & comments ------------------------------------------------
+
+  /// Clears everything between me and [uid]. Returns the net I paid (negative: received).
+  Future<int> settleUp(String roomId, String uid, {String method = 'cash', String? note}) async =>
+      ((await _call('settleUp', {'roomId': roomId, 'uid': uid, 'method': method, 'note': note}))['net'] as num?)
+          ?.toInt() ??
+      0;
+
+  Future<int> confirmAll(String roomId, String uid) async =>
+      ((await _call('confirmAll', {'roomId': roomId, 'uid': uid}))['count'] as num?)?.toInt() ?? 0;
+
+  Future<void> addComment(String roomId, String splitId, String text) =>
+      _call('addComment', {'roomId': roomId, 'splitId': splitId, 'text': text});
+
+  Future<void> deleteComment(String roomId, String splitId, String commentId) =>
+      _call('deleteComment', {'roomId': roomId, 'splitId': splitId, 'commentId': commentId});
+
   // ---- payments ------------------------------------------------------------
 
   Future<void> markPaid(String roomId, String splitId, {required String method, String? note, String? proofUrl}) =>

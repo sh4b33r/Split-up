@@ -148,6 +148,7 @@ class Split {
     this.ruleId,
     this.periodKey,
     this.createdAt,
+    this.commentCount = 0,
   });
   final String id;
   final String roomId;
@@ -169,6 +170,7 @@ class Split {
   final String? ruleId;
   final String? periodKey;
   final DateTime? createdAt;
+  final int commentCount;
 
   /// "Rent · Dec 2026" for a monthly bill, otherwise just the title.
   String get label => Dates.splitLabel(title, periodKey);
@@ -212,6 +214,27 @@ class Split {
       receiptUrl: d['receiptUrl'] as String?,
       ruleId: d['ruleId'] as String?,
       periodKey: d['periodKey'] as String?,
+      createdAt: _time(d['createdAt']),
+      commentCount: (d['commentCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class Comment {
+  Comment({required this.id, required this.authorId, required this.authorName, required this.text, this.createdAt});
+  final String id;
+  final String authorId;
+  final String authorName;
+  final String text;
+  final DateTime? createdAt;
+
+  factory Comment.fromDoc(Doc doc) {
+    final d = doc.data() ?? const {};
+    return Comment(
+      id: doc.id,
+      authorId: (d['authorId'] as String?) ?? '',
+      authorName: (d['authorName'] as String?) ?? 'Someone',
+      text: (d['text'] as String?) ?? '',
       createdAt: _time(d['createdAt']),
     );
   }
@@ -301,6 +324,9 @@ class RecurringRule {
     required this.dueAfterDays,
     required this.active,
     required this.participantCount,
+    required this.splitType,
+    required this.participants,
+    this.skipPeriods = const [],
     this.endPeriod,
     this.lastGeneratedPeriod,
     this.pausedReason,
@@ -315,6 +341,9 @@ class RecurringRule {
   final int dueAfterDays;
   final bool active;
   final int participantCount;
+  final SplitType splitType;
+  final List<ParticipantInput> participants;
+  final List<String> skipPeriods;
   final String? endPeriod;
   final String? lastGeneratedPeriod;
   final String? pausedReason;
@@ -327,11 +356,23 @@ class RecurringRule {
     return 'Every month on $day · $due';
   }
 
-  /// When the next split will be created, or null if the rule has ended.
+  /// The next month this rule would create a split for (skipped or not).
+  String get nextPeriod {
+    final current = Dates.period(DateTime.now());
+    final last = lastGeneratedPeriod ?? '';
+    return last.compareTo(current) >= 0 ? Dates.nextPeriod(last) : current;
+  }
+
+  bool get nextIsSkipped => skipPeriods.contains(nextPeriod);
+
+  /// When the next split will actually be created, or null if the rule has ended.
   DateTime? get nextRun {
-    final next = Dates.nextPeriod(lastGeneratedPeriod ?? Dates.period(DateTime.now()));
-    if (endPeriod != null && next.compareTo(endPeriod!) > 0) return null;
-    return Dates.runDate(next, dayOfMonth);
+    var p = nextPeriod;
+    for (var i = 0; i < 24 && skipPeriods.contains(p); i++) {
+      p = Dates.nextPeriod(p);
+    }
+    if (endPeriod != null && p.compareTo(endPeriod!) > 0) return null;
+    return Dates.runDate(p, dayOfMonth);
   }
 
   factory RecurringRule.fromDoc(Doc doc) {
@@ -347,6 +388,12 @@ class RecurringRule {
       dueAfterDays: (d['dueAfterDays'] as num?)?.toInt() ?? 0,
       active: d['active'] == true,
       participantCount: (d['participants'] as List?)?.length ?? 0,
+      splitType: SplitType.fromId(d['splitType'] as String?),
+      participants: [
+        for (final p in (d['participants'] as List? ?? const []))
+          if (p is Map) ParticipantInput(p['uid'] as String, (p['value'] as num?)?.toInt()),
+      ],
+      skipPeriods: _strings(d['skipPeriods']),
       endPeriod: d['endPeriod'] as String?,
       lastGeneratedPeriod: d['lastGeneratedPeriod'] as String?,
       pausedReason: d['pausedReason'] as String?,
