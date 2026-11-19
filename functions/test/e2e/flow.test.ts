@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { before, test } from 'node:test';
 import { getAuth } from 'firebase-admin/auth';
-import { runRecurring, runReminders } from '../../src/scheduled';
+import { runMonthlySummary, runRecurring, runReminders } from '../../src/scheduled';
 import { addDays, db, today } from '../../src/util';
 
 const PROJECT = process.env.GCLOUD_PROJECT ?? 'demo-splitup';
@@ -382,6 +382,75 @@ test('profile changes reach every room', async () => {
   await call(rahul, 'updateProfile', { name: 'Rahul K', phone: '+974 5555 0000' });
   assert.equal((await db.doc(`rooms/${roomId}/members/${rahul.uid}`).get()).data()!.displayName, 'Rahul K');
   assert.equal((await db.doc(`users/${rahul.uid}`).get()).data()!.emailLower, rahul.email);
+});
+
+test('settle up: pays the difference, confirm all clears it', async () => {
+  const r = await call(aj, 'createRoom', { name: 'Trip', currency: 'QAR', icon: '✈️' });
+  const room2 = r.roomId;
+  await call(rahul, 'joinRoom', { codeOrToken: r.code });
+  const both = [{ uid: aj.uid }, { uid: rahul.uid }];
+  const a = (await call(aj, 'createSplit', { roomId: room2, title: 'Hotel', totalMinor: 10000, paidBy: aj.uid, splitType: 'equal', participants: both })).splitId;
+  const b = (await call(rahul, 'createSplit', { roomId: room2, title: 'Taxi', totalMinor: 3000, paidBy: rahul.uid, splitType: 'equal', participants: both })).splitId;
+  assert.equal(await net(room2, rahul), -3500);
+
+  await fails(call(rahul, 'settleUp', { roomId: room2, uid: rahul.uid }), 'INVALID_ARGUMENT');
+  const s = await call(rahul, 'settleUp', { roomId: room2, uid: aj.uid, method: 'bank_transfer' });
+  assert.equal(s.net, 3500);
+  assert.equal((await share(room2, a, rahul)).status, 'marked_paid');
+  assert.equal((await share(room2, b, aj)).status, 'paid');
+  assert.equal((await split(room2, b)).status, 'settled');
+  assert.ok((await inbox(aj, 'share_marked')).some((n) => n.body === 'Rahul K settled up with you: paid 35 QAR. Confirm?'));
+  await assertBalances(room2);
+
+  await fails(call(rahul, 'confirmAll', { roomId: room2, uid: rahul.uid }), 'FAILED_PRECONDITION');
+  assert.equal((await call(aj, 'confirmAll', { roomId: room2, uid: rahul.uid })).count, 1);
+  assert.equal((await split(room2, a)).status, 'settled');
+  assert.equal(await net(room2, rahul), 0);
+  assert.equal(await net(room2, aj), 0);
+  await assertBalances(room2);
+  await fails(call(rahul, 'settleUp', { roomId: room2, uid: aj.uid }), 'FAILED_PRECONDITION', /already settled/);
+
+  // Comments
+  const c = await call(rahul, 'addComment', { roomId: room2, splitId: a, text: 'Sent by bank transfer' });
+  assert.equal((await split(room2, a)).commentCount, 1);
+  assert.ok((await inbox(aj, 'comment')).some((n) => n.body === 'Sent by bank transfer'));
+  await fails(call(rahul, 'addComment', { roomId: room2, splitId: a, text: '' }), 'INVALID_ARGUMENT');
+  await fails(call(sara, 'addComment', { roomId: room2, splitId: a, text: 'hi' }), 'PERMISSION_DENIED');
+  await call(aj, 'deleteComment', { roomId: room2, splitId: a, commentId: c.id }); // owner may delete
+  assert.equal((await split(room2, a)).commentCount, 0);
+
+  // Monthly bill: skip next month, then change the amount
+  const rule = await call(aj, 'createSplit', {
+    roomId: room2, title: 'Parking', totalMinor: 20000, paidBy: aj.uid, splitType: 'equal', participants: both,
+    repeat: { dayOfMonth: 1, dueAfterDays: 0 },
+  });
+  const nextP = (p: string) => {
+    const [y, m] = p.split('-').map(Number);
+    return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+  };
+  const p1 = nextP(today().slice(0, 7));
+  const p2 = nextP(p1);
+  await fails(call(rahul, 'updateRule', { roomId: room2, ruleId: rule.ruleId, skip: true }), 'PERMISSION_DENIED');
+  await call(aj, 'updateRule', { roomId: room2, ruleId: rule.ruleId, skip: true });
+  const ruleDoc = () => db.doc(`rooms/${room2}/recurringRules/${rule.ruleId}`).get().then((d) => d.data()!);
+  assert.deepEqual((await ruleDoc()).skipPeriods, [p1]);
+  await fails(call(aj, 'updateRule', { roomId: room2, ruleId: rule.ruleId, totalMinor: 1, splitType: 'exact',
+    participants: [{ uid: aj.uid, value: 1 }, { uid: rahul.uid, value: 1 }] }), 'INVALID_ARGUMENT');
+  await call(aj, 'updateRule', { roomId: room2, ruleId: rule.ruleId, totalMinor: 30000 });
+  await runRecurring(`${p1}-01`);
+  assert.equal((await db.doc(`rooms/${room2}/splits/${rule.ruleId}_${p1}`).get()).exists, false, 'skipped month');
+  await runRecurring(`${p2}-01`);
+  const gen = await split(room2, `${rule.ruleId}_${p2}`);
+  assert.equal(gen.totalMinor, 30000, 'new amount used');
+  assert.equal(gen.shareSummary[rahul.uid].amountMinor, 15000);
+  await assertBalances(room2);
+
+  // Monthly summary on the 1st covers last month
+  const before = (await inbox(rahul, 'monthly_summary')).length;
+  await runMonthlySummary(`${p1}-01`);
+  const summaries = await inbox(rahul, 'monthly_summary');
+  assert.ok(summaries.length > before);
+  assert.ok(summaries.some((n) => n.title.endsWith('in Trip') && /bills totalling/.test(n.body)));
 });
 
 test('unauthenticated calls are refused', async () => {

@@ -3,9 +3,22 @@ import { computeShares, ParticipantInput, ShareAmount, SPLIT_TYPES, SplitError, 
 import { notify } from './notify';
 import {
   bad, callable, db, denied, FieldValue, id, int, isManager, isValidPeriod, loadRoomFor,
-  logActivity, memberNames, memberRef, money, notFound, optDate, optStr, precondition,
+  logActivity, memberNames, memberRef, money, notFound, optDate, optStr, periodLabel, precondition,
   Room, roomRef, shortDate, splitLabel, splitRef, str, today, Writer,
 } from './util';
+
+/** "2026-12" -> "2027-01" */
+export function nextPeriod(period: string): string {
+  const [y, m] = period.split('-').map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/** The next month a rule will create a split for. */
+export function nextRulePeriod(rule: FirebaseFirestore.DocumentData, date: string = today()): string {
+  const current = date.slice(0, 7);
+  const last = (rule.lastGeneratedPeriod as string | undefined) ?? '';
+  return last >= current ? nextPeriod(last) : current;
+}
 
 export interface SplitInput {
   title: string;
@@ -430,6 +443,14 @@ export const deleteSplit = callable(async (uid, data) => {
     return { room, label, participantIds: split.participantIds as string[] };
   });
 
+  // Comments belong to the split, so they go with it.
+  const comments = await splitRef(roomId, splitId).collection('comments').limit(500).get();
+  if (!comments.empty) {
+    const batch = db.batch();
+    comments.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
   await notify(result.participantIds.filter((p) => p !== uid), {
     type: 'split_deleted',
     title: result.room.name,
@@ -462,6 +483,47 @@ export const updateRule = callable(async (uid, data) => {
       actorId: uid,
       actorName: names[uid],
       splitTitle: rule.title,
+    });
+  } else if (data.skip === true || data.skip === false) {
+    // Skip (or un-skip) the next month this bill would be created.
+    const period = nextRulePeriod(rule);
+    batch.update(ref, {
+      skipPeriods: data.skip ? FieldValue.arrayUnion(period) : FieldValue.arrayRemove(period),
+    });
+    logActivity(batch, roomId, {
+      type: data.skip ? 'rule_skipped' : 'rule_unskipped',
+      actorId: uid,
+      actorName: names[uid],
+      splitTitle: rule.title,
+      detail: periodLabel(period),
+    });
+  } else if (data.totalMinor !== undefined) {
+    // New amount (and optionally a new split) for the months still to come.
+    const splitType = (data.splitType ?? rule.splitType) as SplitType;
+    if (!SPLIT_TYPES.includes(splitType)) bad('Split type is invalid.');
+    const raw: any[] = Array.isArray(data.participants) ? data.participants : rule.participants;
+    if (raw.length === 0 || raw.length > 50) bad('Pick at least one participant.');
+    const participants: ParticipantInput[] = raw.map((p: any) => {
+      const out: ParticipantInput = { uid: id(p?.uid, 'Participant') };
+      if (splitType !== 'equal') out.value = int(p?.value, 'Amount', 1, 10_000_000_000);
+      return out;
+    });
+    const totalMinor = int(data.totalMinor, 'Total', 1, 10_000_000_000);
+    const paidBy = data.paidBy === undefined ? rule.paidBy : id(data.paidBy, 'Paid by');
+    computeFor(room, { totalMinor, paidBy, splitType, participants });
+    batch.update(ref, {
+      totalMinor,
+      paidBy,
+      splitType,
+      participants: participants.map((p) => ({ uid: p.uid, value: p.value ?? null })),
+      ...(data.title !== undefined ? { title: str(data.title, 'Title', 60) } : {}),
+    });
+    logActivity(batch, roomId, {
+      type: 'rule_updated',
+      actorId: uid,
+      actorName: names[uid],
+      splitTitle: rule.title,
+      amountMinor: totalMinor,
     });
   } else {
     bad('Nothing to change.');

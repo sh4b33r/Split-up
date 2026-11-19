@@ -8,4 +8,6 @@ export {
 export { inviteByEmail, respondInvite, cancelInvite } from './invites';
 export { createSplit, updateSplit, deleteSplit, updateRule } from './splits';
 export { markPaid, confirmShare, rejectShare, markPaidDirect, undoPaid } from './shares';
-export { generateRecurring, sendReminders } from './scheduled';
+export { generateRecurring, sendReminders, sendMonthlySummary } from './scheduled';
+export { settleUp, confirmAll } from './settle';
+export { addComment, deleteComment } from './comments';

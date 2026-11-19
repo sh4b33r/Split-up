@@ -29,6 +29,11 @@ export async function runRecurring(date: string = today()): Promise<number> {
       if (period < rule.startPeriod || (rule.lastGeneratedPeriod ?? '') >= period) continue;
       const runsOn = runDate(period, rule.dayOfMonth);
       if (date < runsOn) continue;
+      if (((rule.skipPeriods as string[] | undefined) ?? []).includes(period)) {
+        // Skipped this month: mark it done so it is not created later.
+        await doc.ref.update({ lastGeneratedPeriod: period });
+        continue;
+      }
 
       const splitId = `${doc.id}_${period}`;
       const input: SplitInput = {
@@ -122,6 +127,56 @@ export async function runReminders(date: string = today()): Promise<number> {
   }
   return sent;
 }
+
+/**
+ * On the 1st of each month: tells every member what last month looked like in
+ * each of their rooms (in-app and push).
+ */
+export async function runMonthlySummary(date: string = today()): Promise<number> {
+  const [y, m] = date.slice(0, 7).split('-').map(Number);
+  const start = new Date(Date.UTC(m === 1 ? y - 1 : y, m === 1 ? 11 : m - 2, 1));
+  const end = new Date(Date.UTC(y, m - 1, 1));
+  const label = start.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' });
+  const rooms = await db.collection('rooms').get();
+  let sent = 0;
+  for (const room of rooms.docs) {
+    const r = room.data();
+    const splits = await room.ref.collection('splits')
+      .where('createdAt', '>=', start).where('createdAt', '<', end).get();
+    if (splits.empty) continue;
+    const spent = new Map<string, number>();
+    let roomTotal = 0;
+    for (const s of splits.docs) {
+      const d = s.data();
+      roomTotal += d.totalMinor;
+      for (const [uid, share] of Object.entries((d.shareSummary ?? {}) as Record<string, any>)) {
+        spent.set(uid, (spent.get(uid) ?? 0) + share.amountMinor);
+      }
+    }
+    const members = await room.ref.collection('members').where('status', '==', 'active').get();
+    for (const mem of members.docs) {
+      const mine = spent.get(mem.id) ?? 0;
+      const net = (mem.data().netMinor as number) ?? 0;
+      const balance = net < 0 ? ` You owe ${money(-net, r.currency)}.` : net > 0 ? ` You're owed ${money(net, r.currency)}.` : ' You\'re all settled.';
+      await notify([mem.id], {
+        type: 'monthly_summary',
+        title: `${label} in ${r.name}`,
+        body: `${splits.size} bill${splits.size === 1 ? '' : 's'} totalling ${money(roomTotal, r.currency)}. Your share: ${money(mine, r.currency)}.${balance}`,
+        roomId: room.id,
+      });
+      sent++;
+    }
+  }
+  return sent;
+}
+
+export const sendMonthlySummary = onSchedule(
+  { schedule: '0 9 1 * *', timeZone: TIME_ZONE, region: REGION },
+  async () => {
+    const n = await runMonthlySummary();
+    logger.info(`sendMonthlySummary: sent ${n} summary(ies)`);
+  },
+);
 
 export const generateRecurring = onSchedule(
   { schedule: '0 6 * * *', timeZone: TIME_ZONE, region: REGION },
