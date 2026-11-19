@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../app/app_config.dart';
 
 import '../../data/models/models.dart';
 import 'api.dart';
@@ -26,6 +29,13 @@ class AuthService extends GetxService {
   StreamSubscription<Doc>? _profileSub;
   String? _watchingUid;
   bool _googleReady = false;
+  bool _autoProfile = false;
+
+  /// A sign-in link that was opened but still needs the email address it was
+  /// sent to (for example when it is opened on a different device).
+  final pendingEmailLink = RxnString();
+
+  static const _emailKey = 'emailForSignInLink';
 
   /// The signed-in user's id. Only call on screens behind sign-in.
   String get uid => user.value!.uid;
@@ -50,6 +60,7 @@ class AuthService extends GetxService {
     emailVerified.value = u?.emailVerified ?? false;
     if (u == null) {
       _watchingUid = null;
+      _autoProfile = false;
       _profileSub?.cancel();
       profile.value = null;
       status.value = AuthStatus.signedOut;
@@ -59,64 +70,123 @@ class AuthService extends GetxService {
     _watchingUid = u.uid;
     status.value = AuthStatus.loading;
     _profileSub?.cancel();
-    _profileSub = FirebaseFirestore.instance.doc('users/${u.uid}').snapshots().listen(
-      (doc) {
-        // A cached "missing" result says nothing yet: wait for the server.
-        if (!doc.exists && doc.metadata.isFromCache) return;
-        final p = AppUser.fromDoc(doc);
-        profile.value = p;
-        status.value = p.name.trim().isEmpty ? AuthStatus.needsProfile : AuthStatus.ready;
-      },
-      onError: (_) => status.value = AuthStatus.needsProfile,
-    );
+    _profileSub = FirebaseFirestore.instance.doc('users/${u.uid}').snapshots().listen((doc) {
+      // A cached "missing" result says nothing yet: wait for the server.
+      if (!doc.exists && doc.metadata.isFromCache) return;
+      final p = AppUser.fromDoc(doc);
+      profile.value = p;
+      if (p.name.trim().isEmpty && _fillProfileFromProvider(u)) return;
+      status.value = p.name.trim().isEmpty ? AuthStatus.needsProfile : AuthStatus.ready;
+    }, onError: (_) => status.value = AuthStatus.needsProfile);
+  }
+
+  /// Google and Apple already know the person's name (and Google their photo),
+  /// so a new account made with them skips the profile step.
+  bool _fillProfileFromProvider(User u) {
+    final name = u.displayName?.trim() ?? '';
+    if (name.isEmpty || _autoProfile) return false;
+    _autoProfile = true;
+    Get.find<Api>().updateProfile(name: name, photoUrl: u.photoURL).catchError((_) {
+      status.value = AuthStatus.needsProfile;
+    });
+    return true;
   }
 
   // ---- sign in ---------------------------------------------------------------
+
+  ActionCodeSettings get _linkSettings => ActionCodeSettings(
+    // On the web the link comes back to this same site; on phones it opens
+    // the app through the hosting domain (see AndroidManifest / entitlements).
+    url: kIsWeb ? '${Uri.base.origin}/' : 'https://${AppConfig.inviteHost}/finish-sign-in',
+    handleCodeInApp: true,
+    androidPackageName: AppConfig.appId,
+    androidInstallApp: true,
+    iOSBundleId: AppConfig.appId,
+    linkDomain: AppConfig.useEmulator ? null : AppConfig.inviteHost,
+  );
+
+  /// Passwordless: emails a one-tap sign-in link. Works for new and existing accounts.
+  Future<void> sendSignInLink(String email) => _guard(() async {
+    final address = email.trim();
+    await _auth.sendSignInLinkToEmail(email: address, actionCodeSettings: _linkSettings);
+    try {
+      (await SharedPreferences.getInstance()).setString(_emailKey, address);
+    } catch (_) {}
+  });
+
+  bool isSignInLink(String link) {
+    try {
+      return _auth.isSignInWithEmailLink(link);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Finishes signing in from an emailed link. Without [email], uses the
+  /// address remembered on this device; if there is none, keeps the link in
+  /// [pendingEmailLink] so the sign-in screen can ask for it.
+  Future<void> completeSignInLink(String link, {String? email}) => _guard(() async {
+    var address = email?.trim();
+    if (address == null || address.isEmpty) {
+      try {
+        address = (await SharedPreferences.getInstance()).getString(_emailKey);
+      } catch (_) {}
+    }
+    if (address == null || address.isEmpty) {
+      pendingEmailLink.value = link;
+      return;
+    }
+    await _auth.signInWithEmailLink(email: address, emailLink: link);
+    pendingEmailLink.value = null;
+    try {
+      (await SharedPreferences.getInstance()).remove(_emailKey);
+    } catch (_) {}
+  });
 
   Future<void> signIn(String email, String password) =>
       _guard(() => _auth.signInWithEmailAndPassword(email: email.trim(), password: password));
 
   Future<void> signUp(String email, String password) => _guard(() async {
-        final cred = await _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
-        // Email invites are only shown to verified addresses.
-        try {
-          await cred.user?.sendEmailVerification();
-        } catch (_) {}
-      });
+    final cred = await _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
+    // Email invites are only shown to verified addresses.
+    try {
+      await cred.user?.sendEmailVerification();
+    } catch (_) {}
+  });
 
   Future<void> sendPasswordReset(String email) => _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
 
   Future<void> signInWithGoogle() => _guard(() async {
-        if (kIsWeb) {
-          await _auth.signInWithPopup(GoogleAuthProvider());
-          return;
-        }
-        if (!_googleReady) {
-          await GoogleSignIn.instance.initialize();
-          _googleReady = true;
-        }
-        final GoogleSignInAccount account;
-        try {
-          account = await GoogleSignIn.instance.authenticate();
-        } on GoogleSignInException catch (e) {
-          if (e.code == GoogleSignInExceptionCode.canceled) return;
-          throw const ApiException("Google sign-in didn't work. Please try again.");
-        }
-        final idToken = account.authentication.idToken;
-        if (idToken == null) throw const ApiException("Google sign-in didn't work. Please try again.");
-        await _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: idToken));
-      });
+    if (kIsWeb) {
+      await _auth.signInWithPopup(GoogleAuthProvider());
+      return;
+    }
+    if (!_googleReady) {
+      await GoogleSignIn.instance.initialize();
+      _googleReady = true;
+    }
+    final GoogleSignInAccount account;
+    try {
+      account = await GoogleSignIn.instance.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      throw const ApiException("Google sign-in didn't work. Please try again.");
+    }
+    final idToken = account.authentication.idToken;
+    if (idToken == null) throw const ApiException("Google sign-in didn't work. Please try again.");
+    await _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: idToken));
+  });
 
   Future<void> signInWithApple() => _guard(() async {
-        final provider = AppleAuthProvider()
-          ..addScope('email')
-          ..addScope('name');
-        if (kIsWeb) {
-          await _auth.signInWithPopup(provider);
-        } else {
-          await _auth.signInWithProvider(provider);
-        }
-      });
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    if (kIsWeb) {
+      await _auth.signInWithPopup(provider);
+    } else {
+      await _auth.signInWithProvider(provider);
+    }
+  });
 
   Future<void> sendVerificationEmail() => _guard(() async => _auth.currentUser?.sendEmailVerification());
 
@@ -164,6 +234,9 @@ class AuthService extends GetxService {
         return 'Choose a password with at least 6 characters.';
       case 'user-disabled':
         return 'This account has been disabled.';
+      case 'invalid-action-code':
+      case 'expired-action-code':
+        return 'That sign-in link has expired or was already used. Ask for a new one.';
       case 'too-many-requests':
         return 'Too many attempts. Please wait a few minutes and try again.';
       case 'network-request-failed':

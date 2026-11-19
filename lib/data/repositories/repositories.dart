@@ -11,21 +11,19 @@ class RoomRepo {
       .collection('rooms')
       .where('memberIds', arrayContains: uid)
       .snapshots()
-      .map((s) => s.docs.map(Room.fromDoc).toList()..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
+      .map(
+        (s) => s.docs.map(Room.fromDoc).toList()..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
+      );
 
   Stream<Room?> room(String roomId) =>
       _db.collection('rooms').doc(roomId).snapshots().map((d) => d.exists ? Room.fromDoc(d) : null);
 
   /// Everyone who has ever been in the room, so old splits can still show names.
-  Stream<List<Member>> members(String roomId) => _db
-      .collection('rooms/$roomId/members')
-      .snapshots()
-      .map((s) => s.docs.map(Member.fromDoc).toList());
+  Stream<List<Member>> members(String roomId) =>
+      _db.collection('rooms/$roomId/members').snapshots().map((s) => s.docs.map(Member.fromDoc).toList());
 
-  Stream<List<JoinRequest>> joinRequests(String roomId) => _db
-      .collection('rooms/$roomId/joinRequests')
-      .snapshots()
-      .map((s) => s.docs.map(JoinRequest.fromDoc).toList());
+  Stream<List<JoinRequest>> joinRequests(String roomId) =>
+      _db.collection('rooms/$roomId/joinRequests').snapshots().map((s) => s.docs.map(JoinRequest.fromDoc).toList());
 
   Stream<List<RecurringRule>> rules(String roomId) => _db
       .collection('rooms/$roomId/recurringRules')
@@ -59,17 +57,13 @@ class SplitRepo {
       .snapshots()
       .map((s) => s.docs.map(Comment.fromDoc).toList());
 
-  Stream<Split?> split(String roomId, String splitId) => _db
-      .doc('rooms/$roomId/splits/$splitId')
-      .snapshots()
-      .map((d) => d.exists ? Split.fromDoc(d) : null);
+  Stream<Split?> split(String roomId, String splitId) =>
+      _db.doc('rooms/$roomId/splits/$splitId').snapshots().map((d) => d.exists ? Split.fromDoc(d) : null);
 }
 
 class ShareRepo {
-  Stream<List<Share>> shares(String roomId, String splitId) => _db
-      .collection('rooms/$roomId/splits/$splitId/shares')
-      .snapshots()
-      .map((s) => s.docs.map(Share.fromDoc).toList());
+  Stream<List<Share>> shares(String roomId, String splitId) =>
+      _db.collection('rooms/$roomId/splits/$splitId/shares').snapshots().map((s) => s.docs.map(Share.fromDoc).toList());
 
   static const _open = ['unpaid', 'marked_paid'];
 
@@ -111,11 +105,12 @@ class InviteRepo {
 class NotificationRepo {
   CollectionReference<Map<String, dynamic>> _col(String uid) => _db.collection('users/$uid/notifications');
 
-  Stream<List<AppNotification>> inbox(String uid) => _col(uid)
-      .orderBy('createdAt', descending: true)
-      .limit(100)
-      .snapshots()
-      .map((s) => s.docs.map(AppNotification.fromDoc).toList());
+  Stream<List<AppNotification>> inbox(String uid) =>
+      _col(uid)
+          .orderBy('createdAt', descending: true)
+          .limit(100)
+          .snapshots()
+          .map((s) => s.docs.map(AppNotification.fromDoc).toList());
 
   Future<void> markRead(String uid, String id) => _col(uid).doc(id).update({'read': true});
 

@@ -6,9 +6,23 @@ class Money {
   /// Supported currencies and the number of decimals of their minor unit.
   /// Must match CURRENCIES in functions/src/config.ts.
   static const Map<String, int> currencies = {
-    'QAR': 2, 'AED': 2, 'SAR': 2, 'KWD': 3, 'BHD': 3, 'OMR': 3,
-    'USD': 2, 'EUR': 2, 'GBP': 2, 'INR': 2, 'PKR': 2, 'BDT': 2,
-    'LKR': 2, 'NPR': 2, 'PHP': 2, 'EGP': 2, 'JPY': 0,
+    'QAR': 2,
+    'AED': 2,
+    'SAR': 2,
+    'KWD': 3,
+    'BHD': 3,
+    'OMR': 3,
+    'USD': 2,
+    'EUR': 2,
+    'GBP': 2,
+    'INR': 2,
+    'PKR': 2,
+    'BDT': 2,
+    'LKR': 2,
+    'NPR': 2,
+    'PHP': 2,
+    'EGP': 2,
+    'JPY': 0,
   };
 
   /// 100,000,000.00 in a 2-decimal currency. Matches MAX_TOTAL_MINOR on the server.
@@ -58,7 +72,8 @@ class Money {
     final frac = match.group(2) ?? '';
     if (whole.isEmpty && frac.isEmpty) return null;
     if (frac.length > d) return null;
-    final minor = int.parse(whole.isEmpty ? '0' : whole) * _scale(currency) +
+    final minor =
+        int.parse(whole.isEmpty ? '0' : whole) * _scale(currency) +
         (frac.isEmpty ? 0 : int.parse(frac.padRight(d, '0')));
     if (minor > maxTotalMinor) return null;
     return minor;

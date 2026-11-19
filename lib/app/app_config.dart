@@ -18,15 +18,15 @@ class AppConfig {
   static const functionsRegion = 'us-central1';
 
   /// Host that serves invite links (Firebase Hosting for the project).
-  static const inviteHost = String.fromEnvironment(
-    'INVITE_HOST',
-    defaultValue: 'split-up-cd996.web.app',
-  );
+  static const inviteHost = String.fromEnvironment('INVITE_HOST', defaultValue: 'split-up-cd996.web.app');
 
   /// Custom URL scheme that also opens the app: `splitup://j/<token>`
   static const inviteScheme = 'splitup';
 
   static String inviteLink(String token) => 'https://$inviteHost/j/$token';
+
+  /// Must match the application ID / bundle ID (change both before publishing).
+  static const appId = 'com.example.splitup';
 
   static const defaultCurrency = 'QAR';
 }

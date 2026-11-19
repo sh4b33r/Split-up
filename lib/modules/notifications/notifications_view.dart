@@ -6,6 +6,7 @@ import '../../core/services/auth_service.dart';
 import '../../core/services/push_service.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/utils/live_controller.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/repositories.dart';
@@ -50,9 +51,11 @@ class NotificationsView extends GetView<NotificationsController> {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          Obx(() => controller.hasUnread
-              ? TextButton(onPressed: controller.markAllRead, child: const Text('Mark all read'))
-              : const SizedBox.shrink()),
+          Obx(
+            () => controller.hasUnread
+                ? TextButton(onPressed: controller.markAllRead, child: const Text('Mark all read'))
+                : const SizedBox.shrink(),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -70,7 +73,7 @@ class NotificationsView extends GetView<NotificationsController> {
             return ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: controller.items.length,
-              itemBuilder: (context, i) => _Tile(n: controller.items[i]),
+              itemBuilder: (context, i) => _Tile(n: controller.items[i]).enter(context, index: i),
             );
           }),
         ),
@@ -87,10 +90,20 @@ class _Tile extends GetView<NotificationsController> {
     final c = StatusColors.of(context);
     final scheme = Theme.of(context).colorScheme;
     return switch (n.type) {
-      'share_confirmed' || 'share_paid_direct' || 'split_settled' || 'join_approved' => (Icons.check_rounded, c.owed, c.owedContainer),
+      'share_confirmed' ||
+      'share_paid_direct' ||
+      'split_settled' ||
+      'join_approved' => (Icons.check_rounded, c.owed, c.owedContainer),
       'share_marked' || 'join_request' || 'reminder' => (Icons.hourglass_top_rounded, c.pending, c.pendingContainer),
-      'share_rejected' || 'share_undone' || 'overdue' || 'removed' || 'join_declined' => (Icons.error_outline, c.owe, c.oweContainer),
+      'share_rejected' ||
+      'share_undone' ||
+      'overdue' ||
+      'removed' ||
+      'join_declined' => (Icons.error_outline, c.owe, c.oweContainer),
       'invite' || 'member_joined' => (Icons.mail_outline, scheme.onPrimaryContainer, scheme.primaryContainer),
+      'settled_up' => (Icons.handshake_rounded, c.owed, c.owedContainer),
+      'comment' => (Icons.chat_bubble_outline_rounded, scheme.onPrimaryContainer, scheme.primaryContainer),
+      'monthly_summary' => (Icons.insights_rounded, scheme.onPrimaryContainer, scheme.primaryContainer),
       _ => (Icons.receipt_long_outlined, scheme.onPrimaryContainer, scheme.primaryContainer),
     };
   }
@@ -113,33 +126,45 @@ class _Tile extends GetView<NotificationsController> {
         onTap: () => controller.open(n),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            CircleAvatar(radius: 19, backgroundColor: background, child: Icon(icon, size: 20, color: color)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(
-                  n.title,
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: n.read ? FontWeight.w500 : FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(n.body, style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 4),
-                Text(
-                  Dates.ago(n.createdAt),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-              ]),
-            ),
-            if (!n.read)
-              Padding(
-                padding: const EdgeInsets.only(left: 8, top: 6),
-                child: Semantics(
-                  label: 'Unread',
-                  child: CircleAvatar(radius: 4.5, backgroundColor: theme.colorScheme.primary),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 19,
+                backgroundColor: background,
+                child: Icon(icon, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      n.title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: n.read ? FontWeight.w500 : FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(n.body, style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      Dates.ago(n.createdAt),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
                 ),
               ),
-          ]),
+              if (!n.read)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 6),
+                  child: Semantics(
+                    label: 'Unread',
+                    child: CircleAvatar(radius: 4.5, backgroundColor: theme.colorScheme.primary),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

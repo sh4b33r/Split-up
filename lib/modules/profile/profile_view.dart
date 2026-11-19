@@ -52,7 +52,11 @@ class ProfileController extends GetxController {
   }
 
   Future<void> signOut() async {
-    if (await Ui.confirm(title: 'Sign out?', message: "You'll need to sign in again to see your rooms.", confirmLabel: 'Sign out')) {
+    if (await Ui.confirm(
+      title: 'Sign out?',
+      message: "You'll need to sign in again to see your rooms.",
+      confirmLabel: 'Sign out',
+    )) {
       await auth.signOut();
     }
   }
@@ -79,9 +83,7 @@ class ProfileView extends GetView<ProfileController> {
       appBar: AppBar(
         title: Text(setup ? 'Set up your profile' : 'Your profile'),
         automaticallyImplyLeading: !setup,
-        actions: [
-          if (setup) TextButton(onPressed: controller.auth.signOut, child: const Text('Sign out')),
-        ],
+        actions: [if (setup) TextButton(onPressed: controller.auth.signOut, child: const Text('Sign out'))],
       ),
       body: SafeArea(
         child: Narrow(
@@ -98,11 +100,16 @@ class ProfileView extends GetView<ProfileController> {
                   ),
                 ),
               Center(
-                child: Obx(() => Stack(children: [
-                      Avatar(
-                        name: controller.name.text.isEmpty ? '?' : controller.name.text,
-                        photoUrl: controller.photoUrl.value,
-                        radius: 48,
+                child: Obx(
+                  () => Stack(
+                    children: [
+                      Hero(
+                        tag: 'me-avatar',
+                        child: Avatar(
+                          name: controller.name.text.isEmpty ? '?' : controller.name.text,
+                          photoUrl: controller.photoUrl.value,
+                          radius: 48,
+                        ),
                       ),
                       Positioned(
                         right: -4,
@@ -115,14 +122,20 @@ class ProfileView extends GetView<ProfileController> {
                               : const Icon(Icons.photo_camera_outlined, size: 20),
                         ),
                       ),
-                    ])),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 28),
               TextField(
                 controller: controller.name,
                 textCapitalization: TextCapitalization.words,
                 maxLength: 40,
-                decoration: const InputDecoration(labelText: 'Name', counterText: '', prefixIcon: Icon(Icons.person_outline)),
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  counterText: '',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -145,17 +158,19 @@ class ProfileView extends GetView<ProfileController> {
                 ),
               ],
               const SizedBox(height: 20),
-              Obx(() => BusyButton(
-                    label: setup ? 'Continue' : 'Save',
-                    busy: controller.busy.value,
-                    onPressed: () async {
-                      final saved = await controller.save();
-                      if (saved && !setup) {
-                        Get.back();
-                        Ui.toast('Profile saved');
-                      }
-                    },
-                  )),
+              Obx(
+                () => BusyButton(
+                  label: setup ? 'Continue' : 'Save',
+                  busy: controller.busy.value,
+                  onPressed: () async {
+                    final saved = await controller.save();
+                    if (saved && !setup) {
+                      Get.back();
+                      Ui.toast('Profile saved');
+                    }
+                  },
+                ),
+              ),
               if (!setup) ...[
                 const SizedBox(height: 12),
                 OutlinedButton.icon(

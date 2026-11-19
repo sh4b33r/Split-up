@@ -5,6 +5,7 @@ import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/utils/money.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/repositories.dart';
@@ -47,6 +48,18 @@ String activityText(Activity a, String currency, {bool withSplit = true}) {
       return "${a.actorName} marked $target's share$ofSplit as paid ($amount)";
     case 'share_undone':
       return "${a.actorName} moved $target's share$ofSplit back to unpaid";
+    case 'settled_up':
+      return a.detail == 'received'
+          ? '${a.actorName} settled up with $target and received $amount'
+          : '${a.actorName} settled up with $target and paid $amount';
+    case 'share_confirmed_all':
+      return "${a.actorName} confirmed $target's payments of $amount (${a.detail ?? ''})";
+    case 'rule_skipped':
+      return '${a.actorName} skipped ${a.detail ?? 'a month'} of $split';
+    case 'rule_unskipped':
+      return '${a.actorName} un-skipped ${a.detail ?? 'a month'} of $split';
+    case 'rule_updated':
+      return '${a.actorName} changed $split to $amount a month';
     case 'rule_paused':
       return '${a.actorName} paused the monthly bill $split';
     case 'rule_resumed':
@@ -70,7 +83,10 @@ class ActivityTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final neutral = (scheme.onSurfaceVariant, scheme.surfaceContainerHighest);
     return switch (activity.type) {
-      'share_confirmed' || 'share_paid_direct' => (Icons.check_rounded, c.owed, c.owedContainer),
+      'share_confirmed' ||
+      'share_paid_direct' ||
+      'share_confirmed_all' ||
+      'settled_up' => (Icons.check_rounded, c.owed, c.owedContainer),
       'share_marked' => (Icons.hourglass_top_rounded, c.pending, c.pendingContainer),
       'share_rejected' || 'share_undone' => (Icons.undo_rounded, c.owe, c.oweContainer),
       'split_created' => (Icons.receipt_long_outlined, scheme.onPrimaryContainer, scheme.primaryContainer),
@@ -78,7 +94,12 @@ class ActivityTile extends StatelessWidget {
       'split_deleted' => (Icons.delete_outline, c.owe, c.oweContainer),
       'member_joined' || 'room_created' => (Icons.person_add_alt_1_outlined, neutral.$1, neutral.$2),
       'member_left' || 'member_removed' => (Icons.person_remove_outlined, neutral.$1, neutral.$2),
-      'rule_paused' || 'rule_resumed' || 'rule_ended' => (Icons.event_repeat_outlined, neutral.$1, neutral.$2),
+      'rule_paused' ||
+      'rule_resumed' ||
+      'rule_ended' ||
+      'rule_skipped' ||
+      'rule_unskipped' ||
+      'rule_updated' => (Icons.event_repeat_outlined, neutral.$1, neutral.$2),
       _ => (Icons.tune, neutral.$1, neutral.$2),
     };
   }
@@ -91,20 +112,30 @@ class ActivityTile extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          CircleAvatar(radius: 17, backgroundColor: background, child: Icon(icon, size: 18, color: color)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(activityText(activity, currency, withSplit: withSplit), style: theme.textTheme.bodyMedium),
-              const SizedBox(height: 2),
-              Text(
-                Dates.ago(activity.createdAt),
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 17,
+              backgroundColor: background,
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(activityText(activity, currency, withSplit: withSplit), style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    Dates.ago(activity.createdAt),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
               ),
-            ]),
-          ),
-        ]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -158,7 +189,7 @@ class ActivityView extends StatelessWidget {
                     activity: a,
                     currency: currency,
                     onTap: canOpen ? () => Get.toNamed(Routes.split(roomId, a.splitId!)) : null,
-                  );
+                  ).enter(context, index: i);
                 },
               );
             }),

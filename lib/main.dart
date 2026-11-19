@@ -13,6 +13,7 @@ import 'app/bindings/initial_binding.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 import 'app/theme/app_theme.dart';
+import 'core/widgets/motion.dart';
 import 'firebase_options.dart';
 
 /// Options for the local emulators. No real project or keys are involved.
@@ -64,7 +65,10 @@ class SplitRoomApp extends StatelessWidget {
       initialBinding: InitialBinding(),
       initialRoute: Routes.splash,
       getPages: AppPages.pages,
-      defaultTransition: Transition.cupertino,
+      // iOS keeps its native swipe-back; everywhere else screens rise and fade in.
+      defaultTransition: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? Transition.cupertino : null,
+      customTransition: SoftRiseTransition(),
+      transitionDuration: const Duration(milliseconds: 380),
     );
   }
 }
@@ -86,13 +90,16 @@ class SetupNeededApp extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 480),
               child: Padding(
                 padding: const EdgeInsets.all(28),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.build_circle_outlined, size: 56),
-                  const SizedBox(height: 16),
-                  Text('One more setup step', style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 12),
-                  Text(message, textAlign: TextAlign.center),
-                ]),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.build_circle_outlined, size: 56),
+                    const SizedBox(height: 16),
+                    Text('One more setup step', style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 12),
+                    Text(message, textAlign: TextAlign.center),
+                  ],
+                ),
               ),
             ),
           ),

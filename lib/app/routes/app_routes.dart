@@ -15,6 +15,8 @@ abstract class Routes {
   static const splitNewPattern = '/room/:roomId/new-split';
   static const splitPattern = '/room/:roomId/split/:splitId';
   static const splitEditPattern = '/room/:roomId/split/:splitId/edit';
+  static const settlePattern = '/room/:roomId/settle';
+  static const statsPattern = '/room/:roomId/stats';
 
   static String room(String roomId) => '/room/$roomId';
   static String roomSettings(String roomId) => '/room/$roomId/settings';
@@ -23,4 +25,6 @@ abstract class Routes {
   static String splitNew(String roomId) => '/room/$roomId/new-split';
   static String split(String roomId, String splitId) => '/room/$roomId/split/$splitId';
   static String splitEdit(String roomId, String splitId) => '/room/$roomId/split/$splitId/edit';
+  static String settle(String roomId) => '/room/$roomId/settle';
+  static String stats(String roomId) => '/room/$roomId/stats';
 }

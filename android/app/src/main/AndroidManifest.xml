@@ -35,6 +35,9 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="split-up-cd996.web.app" android:pathPrefix="/j/"/>
                 <data android:scheme="https" android:host="split-up-cd996.firebaseapp.com" android:pathPrefix="/j/"/>
+                <!-- Passwordless sign-in links -->
+                <data android:scheme="https" android:host="split-up-cd996.web.app" android:pathPrefix="/__/auth/links"/>
+                <data android:scheme="https" android:host="split-up-cd996.web.app" android:pathPrefix="/finish-sign-in"/>
             </intent-filter>
             <!-- splitup://j/<token> -->
             <intent-filter>

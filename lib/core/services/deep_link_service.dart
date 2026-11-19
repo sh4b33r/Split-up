@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../app/app_config.dart';
 import '../../app/routes/app_routes.dart';
+import '../utils/ui.dart';
 import 'auth_service.dart';
 
 /// Invite links: `https://<host>/j/<token>` (Android App Links / iOS Universal
@@ -23,6 +24,7 @@ class DeepLinkService extends GetxService {
     super.onInit();
     if (kIsWeb) {
       pendingToken = tokenFrom(Uri.base);
+      _maybeSignInLink(Uri.base);
       return;
     }
     try {
@@ -55,7 +57,17 @@ class DeepLinkService extends GetxService {
     return null;
   }
 
+  /// A passwordless sign-in link from the email we sent.
+  bool _maybeSignInLink(Uri uri) {
+    final auth = Get.find<AuthService>();
+    final link = uri.toString();
+    if (!auth.isSignInLink(link)) return false;
+    auth.completeSignInLink(link).catchError((Object e) => Ui.toast(Ui.messageOf(e), error: true));
+    return true;
+  }
+
   void _handle(Uri uri) {
+    if (_maybeSignInLink(uri)) return;
     final token = tokenFrom(uri);
     if (token == null) return;
     if (Get.find<AuthService>().status.value == AuthStatus.ready) {

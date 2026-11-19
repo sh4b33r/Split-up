@@ -64,8 +64,14 @@ class Debts {
   /// The fewest payments that settle everyone: repeatedly match the largest
   /// creditor with the largest debtor. At most n - 1 transfers.
   static List<Transfer> simplify(Map<String, int> nets) {
-    final creditors = [for (final e in nets.entries) if (e.value > 0) MapEntry(e.key, e.value)];
-    final debtors = [for (final e in nets.entries) if (e.value < 0) MapEntry(e.key, -e.value)];
+    final creditors = [
+      for (final e in nets.entries)
+        if (e.value > 0) MapEntry(e.key, e.value),
+    ];
+    final debtors = [
+      for (final e in nets.entries)
+        if (e.value < 0) MapEntry(e.key, -e.value),
+    ];
     final out = <Transfer>[];
     while (creditors.isNotEmpty && debtors.isNotEmpty) {
       creditors.sort((a, b) => b.value != a.value ? b.value.compareTo(a.value) : a.key.compareTo(b.key));

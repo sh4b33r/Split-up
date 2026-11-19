@@ -51,7 +51,12 @@ class Dates {
 
   static String ordinal(int n) {
     if (n % 100 >= 11 && n % 100 <= 13) return '${n}th';
-    return switch (n % 10) { 1 => '${n}st', 2 => '${n}nd', 3 => '${n}rd', _ => '${n}th' };
+    return switch (n % 10) {
+      1 => '${n}st',
+      2 => '${n}nd',
+      3 => '${n}rd',
+      _ => '${n}th',
+    };
   }
 
   /// "just now", "5 min ago", "3 h ago", "yesterday", "5 Dec"

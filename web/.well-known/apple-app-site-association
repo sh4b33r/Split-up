@@ -4,7 +4,7 @@
     "details": [
       {
         "appIDs": ["REPLACE_WITH_TEAM_ID.com.example.splitup"],
-        "components": [{ "/": "/j/*" }]
+        "components": [{ "/": "/j/*" }, { "/": "/__/auth/links*" }, { "/": "/finish-sign-in*" }]
       }
     ]
   }

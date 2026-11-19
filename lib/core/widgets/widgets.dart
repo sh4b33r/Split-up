@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../app/theme/app_theme.dart';
 import '../../data/models/models.dart';
 import '../utils/money.dart';
+import 'motion.dart';
 
 /// A round avatar: the photo if there is one, otherwise initials on a colour
 /// picked from the name.
@@ -14,8 +15,14 @@ class Avatar extends StatelessWidget {
   final double radius;
 
   static const _palette = [
-    Color(0xFF0B6E4F), Color(0xFF1D4E89), Color(0xFF8A4FFF), Color(0xFFB5179E),
-    Color(0xFFC1440E), Color(0xFF2A7F9E), Color(0xFF6B705C), Color(0xFF9C6644),
+    Color(0xFF0B6E4F),
+    Color(0xFF1D4E89),
+    Color(0xFF8A4FFF),
+    Color(0xFFB5179E),
+    Color(0xFFC1440E),
+    Color(0xFF2A7F9E),
+    Color(0xFF6B705C),
+    Color(0xFF9C6644),
   ];
 
   String get _initials {
@@ -59,30 +66,39 @@ class AvatarStack extends StatelessWidget {
     return SizedBox(
       height: radius * 2 + 4,
       width: step * (count - 1) + radius * 2 + 4,
-      child: Stack(children: [
-        for (var i = 0; i < shown.length; i++)
-          Positioned(
-            left: i * step,
-            child: CircleAvatar(
-              radius: radius + 2,
-              backgroundColor: scheme.surfaceContainerLowest,
-              child: Avatar(name: shown[i].displayName, photoUrl: shown[i].photoUrl, radius: radius),
-            ),
-          ),
-        if (extra > 0)
-          Positioned(
-            left: shown.length * step,
-            child: CircleAvatar(
-              radius: radius + 2,
-              backgroundColor: scheme.surfaceContainerLowest,
+      child: Stack(
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * step,
               child: CircleAvatar(
-                radius: radius,
-                backgroundColor: scheme.surfaceContainerHighest,
-                child: Text('+$extra', style: TextStyle(fontSize: radius * 0.72, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                radius: radius + 2,
+                backgroundColor: scheme.surfaceContainerLowest,
+                child: Avatar(name: shown[i].displayName, photoUrl: shown[i].photoUrl, radius: radius),
               ),
             ),
-          ),
-      ]),
+          if (extra > 0)
+            Positioned(
+              left: shown.length * step,
+              child: CircleAvatar(
+                radius: radius + 2,
+                backgroundColor: scheme.surfaceContainerLowest,
+                child: CircleAvatar(
+                  radius: radius,
+                  backgroundColor: scheme.surfaceContainerHighest,
+                  child: Text(
+                    '+$extra',
+                    style: TextStyle(
+                      fontSize: radius * 0.72,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -97,7 +113,12 @@ class StatusChip extends StatelessWidget {
       case ShareStatus.paid:
         return StatusChip(label: 'Paid', color: c.owed, background: c.owedContainer, icon: Icons.check_circle);
       case ShareStatus.markedPaid:
-        return StatusChip(label: 'Marked paid', color: c.pending, background: c.pendingContainer, icon: Icons.hourglass_top);
+        return StatusChip(
+          label: 'Marked paid',
+          color: c.pending,
+          background: c.pendingContainer,
+          icon: Icons.hourglass_top,
+        );
       case ShareStatus.unpaid:
         return overdue
             ? StatusChip(label: 'Overdue', color: c.owe, background: c.oweContainer, icon: Icons.error)
@@ -121,7 +142,12 @@ class StatusChip extends StatelessWidget {
 
   factory StatusChip.neutral(BuildContext context, String label, {IconData? icon}) {
     final scheme = Theme.of(context).colorScheme;
-    return StatusChip(label: label, color: scheme.onSurfaceVariant, background: scheme.surfaceContainerHighest, icon: icon);
+    return StatusChip(
+      label: label,
+      color: scheme.onSurfaceVariant,
+      background: scheme.surfaceContainerHighest,
+      icon: icon,
+    );
   }
 
   final String label;
@@ -131,13 +157,21 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) ...[Icon(icon, size: 13, color: color), const SizedBox(width: 4)],
-        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700, height: 1.2)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[Icon(icon, size: 13, color: color), const SizedBox(width: 4)],
+          Text(
+            label,
+            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700, height: 1.2),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -152,26 +186,166 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingIcon(
+              child: Container(
+                width: 92,
+                height: 92,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [scheme.primaryContainer, scheme.primaryContainer.withValues(alpha: 0.35)],
+                  ),
+                ),
+                child: Icon(icon, size: 40, color: scheme.onPrimaryContainer),
+              ),
+            ).pop(context),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ).enter(context, delay: const Duration(milliseconds: 120)),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant, height: 1.45),
+              textAlign: TextAlign.center,
+            ).enter(context, delay: const Duration(milliseconds: 180)),
+            if (action != null) ...[
+              const SizedBox(height: 22),
+              action!.enter(context, delay: const Duration(milliseconds: 240)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A gradient card with soft decorative circles, for headline numbers.
+class HeroPanel extends StatelessWidget {
+  const HeroPanel({super.key, required this.child, this.padding = const EdgeInsets.all(20)});
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: Brand.hero(context),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: Brand.glow(context),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(right: -40, top: -50, child: _circle(160, 0.10)),
+          Positioned(right: 50, bottom: -70, child: _circle(130, 0.07)),
+          Positioned(left: -30, bottom: -40, child: _circle(90, 0.05)),
+          Padding(padding: padding, child: child),
+        ],
+      ),
+    );
+  }
+
+  Widget _circle(double size, double alpha) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: Colors.white.withValues(alpha: alpha),
+    ),
+  );
+}
+
+/// A translucent pill on a [HeroPanel].
+class HeroPill extends StatelessWidget {
+  const HeroPill({super.key, required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
           Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(color: theme.colorScheme.primaryContainer, shape: BoxShape.circle),
-            child: Icon(icon, size: 34, color: theme.colorScheme.onPrimaryContainer),
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), shape: BoxShape.circle),
+            child: Icon(icon, size: 16, color: Colors.white),
           ),
-          const SizedBox(height: 18),
-          Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
-          const SizedBox(height: 6),
-          Text(
-            message,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            textAlign: TextAlign.center,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(color: Brand.onHeroMuted, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                DefaultTextStyle.merge(
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: value),
+                ),
+              ],
+            ),
           ),
-          if (action != null) ...[const SizedBox(height: 20), action!],
-        ]),
+        ],
+      ),
+    );
+  }
+}
+
+/// A card that shrinks a little when pressed and opens [onTap].
+class TapCard extends StatelessWidget {
+  const TapCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.onLongPress,
+    this.padding = EdgeInsets.zero,
+    this.semanticLabel,
+  });
+  final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final EdgeInsets padding;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), boxShadow: Brand.soft(context)),
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          child: Semantics(
+            button: onTap != null,
+            container: true,
+            label: semanticLabel,
+            child: InkWell(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              child: Padding(padding: padding, child: child),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -235,19 +409,21 @@ class SectionTitle extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 20, 4, 10),
-      child: Row(children: [
-        Expanded(
-          child: Text(
-            text.toUpperCase(),
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text.toUpperCase(),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
             ),
           ),
-        ),
-        ?trailing,
-      ]),
+          ?trailing,
+        ],
+      ),
     );
   }
 }
@@ -262,16 +438,34 @@ class BusyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: busy ? null : onPressed,
-        child: busy
-            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
-            : Row(mainAxisSize: MainAxisSize.min, children: [
-                if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
-                Text(label),
-              ]),
+    return PressScale(
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: busy ? null : onPressed,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            transitionBuilder: (c, a) => FadeTransition(
+              opacity: a,
+              child: ScaleTransition(scale: a, child: c),
+            ),
+            child: busy
+                ? const SizedBox(
+                    key: ValueKey('busy'),
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  )
+                : Row(
+                    key: ValueKey(label),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
+                      Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }
@@ -288,8 +482,11 @@ class Narrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        heightFactor: shrink ? 1 : null,
-        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
-      );
+    alignment: Alignment.topCenter,
+    heightFactor: shrink ? 1 : null,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    ),
+  );
 }

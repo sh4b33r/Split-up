@@ -6,6 +6,7 @@ import '../../app/routes/app_routes.dart';
 import '../../core/services/api.dart';
 import '../../core/utils/money.dart';
 import '../../core/utils/ui.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/widgets.dart';
 
 const roomIcons = ['🏠', '🏢', '🏖️', '✈️', '🍽️', '🚗', '🎉', '💼', '🎓', '⚽', '🛒', '💡'];
@@ -52,6 +53,29 @@ class CreateRoomView extends GetView<CreateRoomController> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              Center(
+                child: Obx(
+                  () => AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (c, a) => ScaleTransition(
+                      scale: CurvedAnimation(parent: a, curve: Curves.easeOutBack),
+                      child: c,
+                    ),
+                    child: Container(
+                      key: ValueKey(controller.icon.value),
+                      width: 88,
+                      height: 88,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Text(controller.icon.value, style: const TextStyle(fontSize: 44)),
+                    ),
+                  ),
+                ),
+              ).enter(context),
+              const SizedBox(height: 20),
               TextField(
                 controller: controller.name,
                 autofocus: true,
@@ -60,14 +84,20 @@ class CreateRoomView extends GetView<CreateRoomController> {
                 decoration: const InputDecoration(labelText: 'Room name', hintText: 'Flat 12', counterText: ''),
               ),
               const SizedBox(height: 14),
-              Obx(() => DropdownButtonFormField<String>(
-                    initialValue: controller.currency.value,
-                    decoration: const InputDecoration(labelText: 'Currency'),
-                    items: [for (final c in Money.currencies.keys) DropdownMenuItem(value: c, child: Text(c))],
-                    onChanged: (v) => controller.currency.value = v ?? controller.currency.value,
-                  )),
+              Obx(
+                () => DropdownButtonFormField<String>(
+                  initialValue: controller.currency.value,
+                  decoration: const InputDecoration(labelText: 'Currency'),
+                  items: [for (final c in Money.currencies.keys) DropdownMenuItem(value: c, child: Text(c))],
+                  onChanged: (v) => controller.currency.value = v ?? controller.currency.value,
+                ),
+              ),
               const SectionTitle('Icon'),
-              Obx(() => Wrap(spacing: 10, runSpacing: 10, children: [
+              Obx(
+                () => Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
                     for (final i in roomIcons)
                       Semantics(
                         button: true,
@@ -87,15 +117,26 @@ class CreateRoomView extends GetView<CreateRoomController> {
                                   : theme.colorScheme.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: controller.icon.value == i ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+                                color: controller.icon.value == i
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.outlineVariant,
                                 width: controller.icon.value == i ? 2 : 1,
                               ),
                             ),
-                            child: ExcludeSemantics(child: Text(i, style: const TextStyle(fontSize: 26))),
+                            child: ExcludeSemantics(
+                              child: AnimatedScale(
+                                scale: controller.icon.value == i ? 1.18 : 1,
+                                duration: const Duration(milliseconds: 260),
+                                curve: Curves.easeOutBack,
+                                child: Text(i, style: const TextStyle(fontSize: 26)),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                  ])),
+                  ],
+                ),
+              ),
               const SizedBox(height: 28),
               Obx(() => BusyButton(label: 'Create room', busy: controller.busy.value, onPressed: controller.create)),
               const SizedBox(height: 12),

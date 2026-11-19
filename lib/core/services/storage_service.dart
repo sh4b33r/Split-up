@@ -32,14 +32,15 @@ class StorageService extends GetxService {
     final bytes = await file.readAsBytes();
     if (bytes.length > _maxBytes) throw const ApiException('That photo is larger than 5 MB.');
     final name = file.name.toLowerCase();
-    final type = file.mimeType ??
+    final type =
+        file.mimeType ??
         (name.endsWith('.png')
             ? 'image/png'
             : name.endsWith('.webp')
-                ? 'image/webp'
-                : name.endsWith('.heic')
-                    ? 'image/heic'
-                    : 'image/jpeg');
+            ? 'image/webp'
+            : name.endsWith('.heic')
+            ? 'image/heic'
+            : 'image/jpeg');
     try {
       final ref = FirebaseStorage.instance.ref(path);
       await ref.putData(bytes, SettableMetadata(contentType: type));

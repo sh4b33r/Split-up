@@ -11,7 +11,9 @@ import '../../modules/room/create_room_view.dart';
 import '../../modules/room/room_view.dart';
 import '../../modules/room_settings/room_settings_view.dart';
 import '../../modules/split_detail/split_detail_view.dart';
+import '../../modules/settle/settle_view.dart';
 import '../../modules/split_form/split_form_view.dart';
+import '../../modules/stats/stats_view.dart';
 import '../bindings/initial_binding.dart';
 import 'app_routes.dart';
 
@@ -69,11 +71,41 @@ class AppPages {
     ),
     // Room screens create their own controller (see Scoped), so the same
     // screen can be open for two rooms at once.
-    GetPage(name: Routes.roomPattern, page: () => RoomView(roomId: _room), middlewares: _guard),
-    GetPage(name: Routes.roomSettingsPattern, page: () => RoomSettingsView(roomId: _room), middlewares: _guard),
-    GetPage(name: Routes.recurringPattern, page: () => RecurringView(roomId: _room), middlewares: _guard),
-    GetPage(name: Routes.activityPattern, page: () => ActivityView(roomId: _room), middlewares: _guard),
-    GetPage(name: Routes.splitNewPattern, page: () => SplitFormView(roomId: _room), middlewares: _guard),
+    GetPage(
+      name: Routes.roomPattern,
+      page: () => RoomView(roomId: _room),
+      middlewares: _guard,
+    ),
+    GetPage(
+      name: Routes.roomSettingsPattern,
+      page: () => RoomSettingsView(roomId: _room),
+      middlewares: _guard,
+    ),
+    GetPage(
+      name: Routes.recurringPattern,
+      page: () => RecurringView(roomId: _room),
+      middlewares: _guard,
+    ),
+    GetPage(
+      name: Routes.activityPattern,
+      page: () => ActivityView(roomId: _room),
+      middlewares: _guard,
+    ),
+    GetPage(
+      name: Routes.settlePattern,
+      page: () => SettleView(roomId: _room),
+      middlewares: _guard,
+    ),
+    GetPage(
+      name: Routes.statsPattern,
+      page: () => StatsView(roomId: _room),
+      middlewares: _guard,
+    ),
+    GetPage(
+      name: Routes.splitNewPattern,
+      page: () => SplitFormView(roomId: _room),
+      middlewares: _guard,
+    ),
     GetPage(
       name: Routes.splitPattern,
       page: () => SplitDetailView(roomId: _room, splitId: _split),

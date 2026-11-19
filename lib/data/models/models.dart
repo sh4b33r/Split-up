@@ -179,8 +179,7 @@ class Split {
   int get paidCount => shareSummary.values.where((s) => s.status == ShareStatus.paid).length;
 
   /// True once someone other than the payer has a Paid share.
-  bool get hasPayments =>
-      shareSummary.entries.any((e) => e.key != paidBy && e.value.status == ShareStatus.paid);
+  bool get hasPayments => shareSummary.entries.any((e) => e.key != paidBy && e.value.status == ShareStatus.paid);
 
   /// Still owed to the payer.
   int get outstandingMinor => shareSummary.entries
@@ -282,11 +281,11 @@ class Share {
   bool get isOverdue => status != ShareStatus.paid && Dates.isOverdue(dueDate);
 
   String get methodLabel => switch (method) {
-        'cash' => 'Cash',
-        'bank_transfer' => 'Bank transfer',
-        'other' => 'Other',
-        _ => '',
-      };
+    'cash' => 'Cash',
+    'bank_transfer' => 'Bank transfer',
+    'other' => 'Other',
+    _ => '',
+  };
 
   factory Share.fromDoc(Doc doc) {
     final d = doc.data() ?? const {};
@@ -350,9 +349,7 @@ class RecurringRule {
 
   String get scheduleLabel {
     final day = dayOfMonth == -1 ? 'the last day' : 'the ${Dates.ordinal(dayOfMonth)}';
-    final due = dueAfterDays == 0
-        ? 'due the same day'
-        : 'due $dueAfterDays day${dueAfterDays == 1 ? '' : 's'} later';
+    final due = dueAfterDays == 0 ? 'due the same day' : 'due $dueAfterDays day${dueAfterDays == 1 ? '' : 's'} later';
     return 'Every month on $day · $due';
   }
 

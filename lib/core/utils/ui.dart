@@ -12,22 +12,26 @@ class Ui {
     if (context == null) return;
     final scheme = Theme.of(context).colorScheme;
     Get.closeAllSnackbars();
-    Get.showSnackbar(GetSnackBar(
-      message: message,
-      duration: Duration(seconds: error ? 4 : 2),
-      margin: const EdgeInsets.all(12),
-      borderRadius: 14,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: error ? scheme.error : scheme.inverseSurface,
-      messageText: Text(
-        message,
-        style: TextStyle(color: error ? scheme.onError : scheme.onInverseSurface, fontWeight: FontWeight.w500),
+    Get.showSnackbar(
+      GetSnackBar(
+        message: message,
+        duration: Duration(seconds: error ? 4 : 2),
+        margin: const EdgeInsets.all(12),
+        borderRadius: 16,
+        animationDuration: const Duration(milliseconds: 380),
+        forwardAnimationCurve: Curves.easeOutBack,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: error ? scheme.error : scheme.inverseSurface,
+        messageText: Text(
+          message,
+          style: TextStyle(color: error ? scheme.onError : scheme.onInverseSurface, fontWeight: FontWeight.w500),
+        ),
+        icon: Icon(
+          error ? Icons.error_outline : Icons.check_circle_outline,
+          color: error ? scheme.onError : scheme.onInverseSurface,
+        ),
       ),
-      icon: Icon(
-        error ? Icons.error_outline : Icons.check_circle_outline,
-        color: error ? scheme.onError : scheme.onInverseSurface,
-      ),
-    ));
+    );
   }
 
   static String messageOf(Object e) {
@@ -58,23 +62,27 @@ class Ui {
     String confirmLabel = 'Confirm',
     bool destructive = false,
   }) async {
-    final result = await Get.dialog<bool>(Builder(builder: (context) {
-      final scheme = Theme.of(context).colorScheme;
-      return AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
-          FilledButton(
-            style: destructive
-                ? FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError)
-                : null,
-            onPressed: () => Get.back(result: true),
-            child: Text(confirmLabel),
-          ),
-        ],
-      );
-    }));
+    final result = await Get.dialog<bool>(
+      Builder(
+        builder: (context) {
+          final scheme = Theme.of(context).colorScheme;
+          return AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
+              FilledButton(
+                style: destructive
+                    ? FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError)
+                    : null,
+                onPressed: () => Get.back(result: true),
+                child: Text(confirmLabel),
+              ),
+            ],
+          );
+        },
+      ),
+    );
     return result == true;
   }
 
@@ -89,29 +97,34 @@ class Ui {
     int maxLength = 200,
   }) async {
     final controller = TextEditingController(text: initial);
-    final result = await Get.dialog<String>(AlertDialog(
-      title: Text(title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (message != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(message)),
-          TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: maxLength,
-            keyboardType: keyboardType,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(hintText: hint, counterText: ''),
-            onSubmitted: (v) => Get.back(result: v),
+    final result = await Get.dialog<String>(
+      AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (message != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(message)),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: maxLength,
+              keyboardType: keyboardType,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(hintText: hint, counterText: ''),
+              onSubmitted: (v) => Get.back(result: v),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Get.back(result: controller.text),
+            child: Text(confirmLabel),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Get.back(result: controller.text), child: Text(confirmLabel)),
-      ],
-    ));
+    );
     final text = result?.trim();
     return (text == null || text.isEmpty) ? null : text;
   }

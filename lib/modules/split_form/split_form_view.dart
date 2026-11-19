@@ -61,10 +61,10 @@ class SplitFormController extends RoomScope {
   bool get moneyLocked => original?.hasPayments ?? false;
 
   TextEditingController inputFor(String uid) => _inputs.putIfAbsent(uid, () {
-        final c = TextEditingController();
-        c.addListener(() => tick.value++);
-        return c;
-      });
+    final c = TextEditingController();
+    c.addListener(() => tick.value++);
+    return c;
+  });
 
   @override
   void onInit() {
@@ -133,7 +133,8 @@ class SplitFormController extends RoomScope {
     final active = activeMembers;
     final o = original;
     if (o == null) return active;
-    final first = [for (final id in o.participantIds) member(id)].where((m) => m.isActive || o.participantIds.contains(m.uid));
+    final first = [for (final id in o.participantIds) member(id)]
+        .where((m) => m.isActive || o.participantIds.contains(m.uid));
     final rest = active.where((m) => !o.participantIds.contains(m.uid));
     return [...first, ...rest];
   }
@@ -161,30 +162,48 @@ class SplitFormController extends RoomScope {
       return SplitPreview(error: 'Pick who takes part.', participants: inputs, totalMinor: totalMinor);
     }
     if (!people.any((m) => m.uid != paidBy.value)) {
-      return SplitPreview(error: 'Add at least one person other than whoever paid.', participants: inputs, totalMinor: totalMinor);
+      return SplitPreview(
+        error: 'Add at least one person other than whoever paid.',
+        participants: inputs,
+        totalMinor: totalMinor,
+      );
     }
 
     // Friendlier messages than the calculator's for the two "must add up" types.
     if (t == SplitType.exact) {
       final sum = inputs.fold<int>(0, (s, p) => s + (p.value ?? 0));
-      final partial = {for (final p in inputs) if (p.value != null) p.uid: p.value!};
+      final partial = {
+        for (final p in inputs)
+          if (p.value != null) p.uid: p.value!,
+      };
       if (sum < totalMinor) {
-        return SplitPreview(amounts: partial, participants: inputs, totalMinor: totalMinor,
-            error: '${Money.format(totalMinor - sum, currency)} left to assign.');
+        return SplitPreview(
+          amounts: partial,
+          participants: inputs,
+          totalMinor: totalMinor,
+          error: '${Money.format(totalMinor - sum, currency)} left to assign.',
+        );
       }
       if (sum > totalMinor) {
-        return SplitPreview(amounts: partial, participants: inputs, totalMinor: totalMinor,
-            error: '${Money.format(sum - totalMinor, currency)} over the total.');
+        return SplitPreview(
+          amounts: partial,
+          participants: inputs,
+          totalMinor: totalMinor,
+          error: '${Money.format(sum - totalMinor, currency)} over the total.',
+        );
       }
     }
     if (t == SplitType.percentage) {
       final sum = inputs.fold<int>(0, (s, p) => s + (p.value ?? 0));
       if (sum != SplitCalculator.percentScale) {
         final diff = (SplitCalculator.percentScale - sum).abs();
-        return SplitPreview(participants: inputs, totalMinor: totalMinor,
-            error: sum < SplitCalculator.percentScale
-                ? '${_percentText(diff)}% left to assign.'
-                : '${_percentText(diff)}% over 100%.');
+        return SplitPreview(
+          participants: inputs,
+          totalMinor: totalMinor,
+          error: sum < SplitCalculator.percentScale
+              ? '${_percentText(diff)}% left to assign.'
+              : '${_percentText(diff)}% over 100%.',
+        );
       }
     }
     try {
@@ -277,13 +296,28 @@ class SplitFormController extends RoomScope {
       final noteText = note.text.trim().isEmpty ? null : note.text.trim();
       if (isEdit) {
         await api.updateSplit(
-          roomId: roomId, splitId: splitId!, title: name, totalMinor: p.totalMinor!, paidBy: paidBy.value,
-          type: type.value, participants: p.participants, dueDate: dueDate.value, note: noteText, receiptUrl: receipt,
+          roomId: roomId,
+          splitId: splitId!,
+          title: name,
+          totalMinor: p.totalMinor!,
+          paidBy: paidBy.value,
+          type: type.value,
+          participants: p.participants,
+          dueDate: dueDate.value,
+          note: noteText,
+          receiptUrl: receipt,
         );
       } else {
         await api.createSplit(
-          roomId: roomId, title: name, totalMinor: p.totalMinor!, paidBy: paidBy.value, type: type.value,
-          participants: p.participants, dueDate: dueDate.value, note: noteText, receiptUrl: receipt,
+          roomId: roomId,
+          title: name,
+          totalMinor: p.totalMinor!,
+          paidBy: paidBy.value,
+          type: type.value,
+          participants: p.participants,
+          dueDate: dueDate.value,
+          note: noteText,
+          receiptUrl: receipt,
           repeatDayOfMonth: repeat.value ? repeatDay.value : null,
           repeatDueAfterDays: after,
           repeatEndPeriod: repeat.value ? endPeriod.value : null,
@@ -334,11 +368,13 @@ class SplitFormView extends StatelessWidget {
             shrink: true,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Obx(() => BusyButton(
-                    label: c.isEdit ? 'Save changes' : 'Save split',
-                    busy: c.busy.value,
-                    onPressed: c.ready.value ? c.save : null,
-                  )),
+              child: Obx(
+                () => BusyButton(
+                  label: c.isEdit ? 'Save changes' : 'Save split',
+                  busy: c.busy.value,
+                  onPressed: c.ready.value ? c.save : null,
+                ),
+              ),
             ),
           ),
         ),
@@ -368,16 +404,18 @@ class _Form extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(color: colors.pendingContainer, borderRadius: BorderRadius.circular(16)),
-            child: Row(children: [
-              Icon(Icons.lock_outline, color: colors.pending),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Someone has already paid, so the amounts are locked. Undo the paid shares to change them.',
-                  style: TextStyle(color: colors.pending, fontWeight: FontWeight.w500),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline, color: colors.pending),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Someone has already paid, so the amounts are locked. Undo the paid shares to change them.',
+                    style: TextStyle(color: colors.pending, fontWeight: FontWeight.w500),
+                  ),
                 ),
-              ),
-            ]),
+              ],
+            ),
           ),
         TextField(
           controller: c.title,
@@ -385,69 +423,82 @@ class _Form extends StatelessWidget {
           maxLength: 60,
           textCapitalization: TextCapitalization.sentences,
           textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(labelText: 'Title', hintText: 'Rent, Internet, Groceries…', counterText: ''),
+          decoration: const InputDecoration(
+            labelText: 'Title',
+            hintText: 'Rent, Internet, Groceries…',
+            counterText: '',
+          ),
         ),
         const SizedBox(height: 12),
         IgnorePointer(
           ignoring: locked,
           child: Opacity(
             opacity: locked ? 0.55 : 1,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              AmountField(
-                controller: c.total,
-                currency: c.currency,
-                label: 'Total',
-                style: theme.textTheme.headlineSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: members.any((m) => m.uid == c.paidBy.value) ? c.paidBy.value : null,
-                decoration: const InputDecoration(labelText: 'Paid by'),
-                items: [for (final m in members) DropdownMenuItem(value: m.uid, child: Text(c.nameOf(m.uid)))],
-                onChanged: (v) => c.paidBy.value = v ?? c.paidBy.value,
-              ),
-              const SectionTitle('How to split'),
-              SegmentedButton<SplitType>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(value: SplitType.equal, label: Text('Equal')),
-                  ButtonSegment(value: SplitType.exact, label: Text('Exact')),
-                  ButtonSegment(value: SplitType.percentage, label: Text('%')),
-                  ButtonSegment(value: SplitType.shares, label: Text('Shares')),
-                ],
-                selected: {c.type.value},
-                onSelectionChanged: (s) => c.setType(s.first),
-              ),
-              const SizedBox(height: 12),
-              _Participants(c: c, members: members),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AmountField(
+                  controller: c.total,
+                  currency: c.currency,
+                  label: 'Total',
+                  style: theme.textTheme.headlineSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: members.any((m) => m.uid == c.paidBy.value) ? c.paidBy.value : null,
+                  decoration: const InputDecoration(labelText: 'Paid by'),
+                  items: [for (final m in members) DropdownMenuItem(value: m.uid, child: Text(c.nameOf(m.uid)))],
+                  onChanged: (v) => c.paidBy.value = v ?? c.paidBy.value,
+                ),
+                const SectionTitle('How to split'),
+                SegmentedButton<SplitType>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: SplitType.equal, label: Text('Equal')),
+                    ButtonSegment(value: SplitType.exact, label: Text('Exact')),
+                    ButtonSegment(value: SplitType.percentage, label: Text('%')),
+                    ButtonSegment(value: SplitType.shares, label: Text('Shares')),
+                  ],
+                  selected: {c.type.value},
+                  onSelectionChanged: (s) => c.setType(s.first),
+                ),
+                const SizedBox(height: 12),
+                _Participants(c: c, members: members),
+              ],
+            ),
           ),
         ),
         const SectionTitle('Details'),
         Card(
           clipBehavior: Clip.antiAlias,
-          child: Column(children: [
-            ListTile(
-              leading: const Icon(Icons.event_outlined),
-              title: Text(c.dueDate.value == null ? 'Add a due date' : 'Due ${Dates.short(c.dueDate.value!)}'),
-              subtitle: c.dueDate.value == null ? const Text('Members get reminders before it') : null,
-              trailing: c.dueDate.value == null
-                  ? const Icon(Icons.chevron_right)
-                  : IconButton(tooltip: 'Remove due date', icon: const Icon(Icons.close), onPressed: () => c.dueDate.value = null),
-              onTap: () => c.pickDue(context),
-            ),
-            if (!c.isEdit) ...[
-              const Divider(indent: 56),
-              SwitchListTile(
-                secondary: const Icon(Icons.event_repeat_outlined),
-                title: const Text('Repeat monthly'),
-                subtitle: const Text('Creates this bill again every month'),
-                value: c.repeat.value,
-                onChanged: c.setRepeat,
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: Text(c.dueDate.value == null ? 'Add a due date' : 'Due ${Dates.short(c.dueDate.value!)}'),
+                subtitle: c.dueDate.value == null ? const Text('Members get reminders before it') : null,
+                trailing: c.dueDate.value == null
+                    ? const Icon(Icons.chevron_right)
+                    : IconButton(
+                        tooltip: 'Remove due date',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => c.dueDate.value = null,
+                      ),
+                onTap: () => c.pickDue(context),
               ),
-              if (c.repeat.value) _Repeat(c: c),
+              if (!c.isEdit) ...[
+                const Divider(indent: 56),
+                SwitchListTile(
+                  secondary: const Icon(Icons.event_repeat_outlined),
+                  title: const Text('Repeat monthly'),
+                  subtitle: const Text('Creates this bill again every month'),
+                  value: c.repeat.value,
+                  onChanged: c.setRepeat,
+                ),
+                if (c.repeat.value) _Repeat(c: c),
+              ],
             ],
-          ]),
+          ),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -481,82 +532,98 @@ class _Participants extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Column(children: [
-        for (final (i, m) in members.indexed) ...[
-          if (i > 0) const Divider(indent: 56),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
-            child: Row(children: [
-              Checkbox(
-                value: c.selected.contains(m.uid),
-                onChanged: (v) => c.toggle(m.uid, v ?? false),
-                semanticLabel: 'Include ${m.displayName}',
-              ),
-              Avatar(name: m.displayName, photoUrl: m.photoUrl, radius: 15),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(c.nameOf(m.uid), style: theme.textTheme.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-              if (c.selected.contains(m.uid)) ...[
-                if (type == SplitType.exact)
-                  SizedBox(width: 150, child: AmountField(controller: c.inputFor(m.uid), currency: c.currency, dense: true))
-                else if (type != SplitType.equal) ...[
-                  SizedBox(
-                    width: 84,
-                    child: TextField(
-                      controller: c.inputFor(m.uid),
-                      textAlign: TextAlign.end,
-                      keyboardType: TextInputType.numberWithOptions(decimal: type == SplitType.percentage),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          type == SplitType.percentage ? RegExp(r'^\d{0,3}(\.\d{0,2})?') : RegExp(r'^\d{0,4}'),
-                        ),
-                      ],
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: type == SplitType.percentage ? '0' : '1',
-                        suffixText: type == SplitType.percentage ? '%' : '×',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                    ),
+      child: Column(
+        children: [
+          for (final (i, m) in members.indexed) ...[
+            if (i > 0) const Divider(indent: 56),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: c.selected.contains(m.uid),
+                    onChanged: (v) => c.toggle(m.uid, v ?? false),
+                    semanticLabel: 'Include ${m.displayName}',
                   ),
+                  Avatar(name: m.displayName, photoUrl: m.photoUrl, radius: 15),
                   const SizedBox(width: 10),
-                ],
-                if (type != SplitType.exact)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 92),
+                  Expanded(
                     child: Text(
-                      preview.amounts[m.uid] == null ? '—' : Money.format(preview.amounts[m.uid]!, c.currency),
-                      textAlign: TextAlign.end,
-                      style: theme.textTheme.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                      c.nameOf(m.uid),
+                      style: theme.textTheme.bodyLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-              ],
-            ]),
-          ),
-        ],
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: preview.ok ? colors.owedContainer : theme.colorScheme.surfaceContainerHighest,
-          child: Row(children: [
-            Icon(
-              preview.ok ? Icons.check_circle : Icons.info_outline,
-              size: 18,
-              color: preview.ok ? colors.owed : theme.colorScheme.onSurfaceVariant,
+                  if (c.selected.contains(m.uid)) ...[
+                    if (type == SplitType.exact)
+                      SizedBox(
+                        width: 150,
+                        child: AmountField(controller: c.inputFor(m.uid), currency: c.currency, dense: true),
+                      )
+                    else if (type != SplitType.equal) ...[
+                      SizedBox(
+                        width: 84,
+                        child: TextField(
+                          controller: c.inputFor(m.uid),
+                          textAlign: TextAlign.end,
+                          keyboardType: TextInputType.numberWithOptions(decimal: type == SplitType.percentage),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              type == SplitType.percentage ? RegExp(r'^\d{0,3}(\.\d{0,2})?') : RegExp(r'^\d{0,4}'),
+                            ),
+                          ],
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: type == SplitType.percentage ? '0' : '1',
+                            suffixText: type == SplitType.percentage ? '%' : '×',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    if (type != SplitType.exact)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 92),
+                        child: Text(
+                          preview.amounts[m.uid] == null ? '—' : Money.format(preview.amounts[m.uid]!, c.currency),
+                          textAlign: TextAlign.end,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                preview.ok ? 'Shares add up to ${Money.format(preview.totalMinor!, c.currency)}' : preview.error!,
-                style: theme.textTheme.labelLarge?.copyWith(
+          ],
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: preview.ok ? colors.owedContainer : theme.colorScheme.surfaceContainerHighest,
+            child: Row(
+              children: [
+                Icon(
+                  preview.ok ? Icons.check_circle : Icons.info_outline,
+                  size: 18,
                   color: preview.ok ? colors.owed : theme.colorScheme.onSurfaceVariant,
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    preview.ok ? 'Shares add up to ${Money.format(preview.totalMinor!, c.currency)}' : preview.error!,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: preview.ok ? colors.owed : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -571,42 +638,53 @@ class _Repeat extends StatelessWidget {
   Widget _content(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: Column(children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            flex: 3,
-            child: DropdownButtonFormField<int>(
-              initialValue: c.repeatDay.value,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Repeats on'),
-              items: [
-                for (var d = 1; d <= 28; d++) DropdownMenuItem(value: d, child: Text('the ${Dates.ordinal(d)}')),
-                const DropdownMenuItem(value: -1, child: Text('the last day')),
-              ],
-              onChanged: (v) => c.repeatDay.value = v ?? 1,
-            ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: DropdownButtonFormField<int>(
+                  initialValue: c.repeatDay.value,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Repeats on'),
+                  items: [
+                    for (var d = 1; d <= 28; d++) DropdownMenuItem(value: d, child: Text('the ${Dates.ordinal(d)}')),
+                    const DropdownMenuItem(value: -1, child: Text('the last day')),
+                  ],
+                  onChanged: (v) => c.repeatDay.value = v ?? 1,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: c.dueAfter,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+                  decoration: const InputDecoration(labelText: 'Due after', suffixText: 'days'),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: TextField(
-              controller: c.dueAfter,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
-              decoration: const InputDecoration(labelText: 'Due after', suffixText: 'days'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              c.endPeriod.value == null ? 'No end date' : 'Ends after ${Dates.periodLabel(c.endPeriod.value!)}',
             ),
+            subtitle: c.endPeriod.value == null ? const Text('Repeats until you stop it') : null,
+            trailing: c.endPeriod.value == null
+                ? TextButton(onPressed: () => c.pickEnd(context), child: const Text('Set end'))
+                : IconButton(
+                    tooltip: 'Remove end date',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => c.endPeriod.value = null,
+                  ),
+            onTap: () => c.pickEnd(context),
           ),
-        ]),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(c.endPeriod.value == null ? 'No end date' : 'Ends after ${Dates.periodLabel(c.endPeriod.value!)}'),
-          subtitle: c.endPeriod.value == null ? const Text('Repeats until you stop it') : null,
-          trailing: c.endPeriod.value == null
-              ? TextButton(onPressed: () => c.pickEnd(context), child: const Text('Set end'))
-              : IconButton(tooltip: 'Remove end date', icon: const Icon(Icons.close), onPressed: () => c.endPeriod.value = null),
-          onTap: () => c.pickEnd(context),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }

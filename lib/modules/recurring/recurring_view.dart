@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/utils/money.dart';
+import '../../core/utils/split_calculator.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/models.dart';
@@ -27,10 +29,42 @@ class RecurringController extends RoomScope {
   bool canManage(RecurringRule r) => isManager || r.createdBy == uid;
 
   Future<void> setActive(RecurringRule r, bool active) => Ui.attempt(
-        () => api.setRuleActive(roomId, r.id, active),
-        busy: busy,
-        success: active ? '${r.title} will repeat again' : '${r.title} is paused',
-      );
+    () => api.setRuleActive(roomId, r.id, active),
+    busy: busy,
+    success: active ? '${r.title} will repeat again' : '${r.title} is paused',
+  );
+
+  Future<void> toggleSkip(RecurringRule r) => Ui.attempt(
+    () => api.skipRule(roomId, r.id, skip: !r.nextIsSkipped),
+    busy: busy,
+    success: r.nextIsSkipped
+        ? '${r.title} will be created in ${Dates.periodLabel(r.nextPeriod)}'
+        : '${Dates.periodLabel(r.nextPeriod)} skipped',
+  );
+
+  /// A new total for the months still to come. Equal, % and shares splits
+  /// rescale on their own; exact amounts need re-entering in a new split.
+  Future<void> changeAmount(RecurringRule r) async {
+    if (r.splitType == SplitType.exact) {
+      return Ui.toast('This bill uses exact amounts. End it and add it again with the new amounts.', error: true);
+    }
+    final text = await Ui.prompt(
+      title: 'New amount for ${r.title}',
+      message: 'Used from the next bill on. Bills already created keep their amount.',
+      initial: Money.editable(r.totalMinor, r.currency),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      confirmLabel: 'Save',
+      maxLength: 15,
+    );
+    if (text == null) return;
+    final minor = Money.parse(text, r.currency);
+    if (minor == null || minor <= 0) return Ui.toast('Enter a valid amount.', error: true);
+    await Ui.attempt(
+      () => api.updateRuleAmount(roomId, r.id, totalMinor: minor, type: r.splitType, participants: r.participants),
+      busy: busy,
+      success: '${r.title} is now ${Money.format(minor, r.currency)} a month',
+    );
+  }
 
   Future<void> end(RecurringRule r) async {
     final ok = await Ui.confirm(
@@ -63,7 +97,8 @@ class RecurringView extends StatelessWidget {
                 return const EmptyState(
                   icon: Icons.event_repeat_outlined,
                   title: 'No monthly bills',
-                  message: 'When you add a split, turn on "Repeat monthly" for bills like rent or internet. '
+                  message:
+                      'When you add a split, turn on "Repeat monthly" for bills like rent or internet. '
                       'A new one is created for you every month.',
                 );
               }
@@ -71,7 +106,7 @@ class RecurringView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 itemCount: c.rules.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, i) => _RuleCard(c: c, rule: c.rules[i]),
+                itemBuilder: (context, i) => _RuleCard(c: c, rule: c.rules[i]).enter(context, index: i),
               );
             }),
           ),
@@ -109,41 +144,83 @@ class _RuleCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(rule.title, style: theme.textTheme.titleMedium)),
-            Text(Money.format(rule.totalMinor, rule.currency), style: theme.textTheme.titleMedium),
-            const SizedBox(width: 8),
-          ]),
-          const SizedBox(height: 4),
-          Text(rule.scheduleLabel, style: muted),
-          Text('Paid by ${c.nameOf(rule.paidBy)} · ${rule.participantCount} people', style: muted),
-          if (rule.endPeriod != null && rule.active && next != null)
-            Text('Ends after ${Dates.periodLabel(rule.endPeriod!)}', style: muted),
-          const SizedBox(height: 10),
-          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: rule.active && next != null
-                    ? StatusChip(label: status, color: colors.owed, background: colors.owedContainer, icon: Icons.event)
-                    : Text(status, style: theme.textTheme.labelLarge?.copyWith(color: colors.pending)),
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text(rule.title, style: theme.textTheme.titleMedium)),
+                Text(Money.format(rule.totalMinor, rule.currency), style: theme.textTheme.titleMedium),
+                const SizedBox(width: 8),
+              ],
             ),
-            if (c.canManage(rule)) ...[
-              if (rule.pausedReason != 'member_left' && rule.pausedReason != 'ended')
-                TextButton(
-                  onPressed: () => c.setActive(rule, !rule.active),
-                  child: Text(rule.active ? 'Pause' : 'Resume'),
+            const SizedBox(height: 4),
+            Text(rule.scheduleLabel, style: muted),
+            Text('Paid by ${c.nameOf(rule.paidBy)} · ${rule.participantCount} people', style: muted),
+            if (rule.endPeriod != null && rule.active && next != null)
+              Text('Ends after ${Dates.periodLabel(rule.endPeriod!)}', style: muted),
+            if (rule.active && rule.nextIsSkipped)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: StatusChip(
+                  label: '${Dates.periodLabel(rule.nextPeriod)} skipped',
+                  color: colors.pending,
+                  background: colors.pendingContainer,
+                  icon: Icons.fast_forward_rounded,
                 ),
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                onPressed: () => c.end(rule),
-                child: const Text('End'),
               ),
-            ],
-          ]),
-        ]),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: rule.active && next != null
+                        ? StatusChip(
+                            label: status,
+                            color: colors.owed,
+                            background: colors.owedContainer,
+                            icon: Icons.event,
+                          )
+                        : Text(status, style: theme.textTheme.labelLarge?.copyWith(color: colors.pending)),
+                  ),
+                ),
+                if (c.canManage(rule)) ...[
+                  if (rule.pausedReason != 'member_left' && rule.pausedReason != 'ended')
+                    TextButton(
+                      onPressed: () => c.setActive(rule, !rule.active),
+                      child: Text(rule.active ? 'Pause' : 'Resume'),
+                    ),
+                  PopupMenuButton<String>(
+                    tooltip: 'More for ${rule.title}',
+                    onSelected: (v) => switch (v) {
+                      'skip' => c.toggleSkip(rule),
+                      'amount' => c.changeAmount(rule),
+                      _ => c.end(rule),
+                    },
+                    itemBuilder: (_) => [
+                      if (rule.active)
+                        PopupMenuItem(
+                          value: 'skip',
+                          child: Text(
+                            rule.nextIsSkipped
+                                ? "Don't skip ${Dates.periodLabel(rule.nextPeriod)}"
+                                : 'Skip ${Dates.periodLabel(rule.nextPeriod)}',
+                          ),
+                        ),
+                      const PopupMenuItem(value: 'amount', child: Text('Change amount')),
+                      PopupMenuItem(
+                        value: 'end',
+                        child: Text('End this bill', style: TextStyle(color: theme.colorScheme.error)),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

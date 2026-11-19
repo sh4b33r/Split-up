@@ -63,12 +63,8 @@ class Api extends GetxService {
   Future<void> respondJoinRequest(String roomId, String uid, {required bool approve}) =>
       _call('respondJoinRequest', {'roomId': roomId, 'uid': uid, 'approve': approve});
 
-  Future<void> updateRoom(String roomId, {String? name, String? icon, bool? requireApproval}) => _call('updateRoom', {
-        'roomId': roomId,
-        'name': ?name,
-        'icon': ?icon,
-        'requireApproval': ?requireApproval,
-      });
+  Future<void> updateRoom(String roomId, {String? name, String? icon, bool? requireApproval}) =>
+      _call('updateRoom', {'roomId': roomId, 'name': ?name, 'icon': ?icon, 'requireApproval': ?requireApproval});
 
   Future<void> resetInvite(String roomId) => _call('resetInvite', {'roomId': roomId});
   Future<void> removeMember(String roomId, String uid) => _call('removeMember', {'roomId': roomId, 'uid': uid});
@@ -102,20 +98,19 @@ class Api extends GetxService {
     String? dueDate,
     String? note,
     String? receiptUrl,
-  }) =>
-      {
-        'roomId': roomId,
-        'title': title,
-        'totalMinor': totalMinor,
-        'paidBy': paidBy,
-        'splitType': type.id,
-        'participants': [
-          for (final p in participants) {'uid': p.uid, if (type != SplitType.equal) 'value': p.value},
-        ],
-        'dueDate': dueDate,
-        'note': note,
-        'receiptUrl': receiptUrl,
-      };
+  }) => {
+    'roomId': roomId,
+    'title': title,
+    'totalMinor': totalMinor,
+    'paidBy': paidBy,
+    'splitType': type.id,
+    'participants': [
+      for (final p in participants) {'uid': p.uid, if (type != SplitType.equal) 'value': p.value},
+    ],
+    'dueDate': dueDate,
+    'note': note,
+    'receiptUrl': receiptUrl,
+  };
 
   Future<String> createSplit({
     required String roomId,
@@ -132,8 +127,15 @@ class Api extends GetxService {
     String? repeatEndPeriod,
   }) async {
     final payload = _splitPayload(
-      roomId: roomId, title: title, totalMinor: totalMinor, paidBy: paidBy, type: type,
-      participants: participants, dueDate: dueDate, note: note, receiptUrl: receiptUrl,
+      roomId: roomId,
+      title: title,
+      totalMinor: totalMinor,
+      paidBy: paidBy,
+      type: type,
+      participants: participants,
+      dueDate: dueDate,
+      note: note,
+      receiptUrl: receiptUrl,
     );
     if (repeatDayOfMonth != null) {
       payload['repeat'] = {
@@ -156,14 +158,20 @@ class Api extends GetxService {
     String? dueDate,
     String? note,
     String? receiptUrl,
-  }) =>
-      _call('updateSplit', {
-        ..._splitPayload(
-          roomId: roomId, title: title, totalMinor: totalMinor, paidBy: paidBy, type: type,
-          participants: participants, dueDate: dueDate, note: note, receiptUrl: receiptUrl,
-        ),
-        'splitId': splitId,
-      });
+  }) => _call('updateSplit', {
+    ..._splitPayload(
+      roomId: roomId,
+      title: title,
+      totalMinor: totalMinor,
+      paidBy: paidBy,
+      type: type,
+      participants: participants,
+      dueDate: dueDate,
+      note: note,
+      receiptUrl: receiptUrl,
+    ),
+    'splitId': splitId,
+  });
 
   Future<void> deleteSplit(String roomId, String splitId) =>
       _call('deleteSplit', {'roomId': roomId, 'splitId': splitId});
@@ -184,16 +192,15 @@ class Api extends GetxService {
     required int totalMinor,
     required SplitType type,
     required List<ParticipantInput> participants,
-  }) =>
-      _call('updateRule', {
-        'roomId': roomId,
-        'ruleId': ruleId,
-        'totalMinor': totalMinor,
-        'splitType': type.id,
-        'participants': [
-          for (final p in participants) {'uid': p.uid, if (type != SplitType.equal) 'value': p.value},
-        ],
-      });
+  }) => _call('updateRule', {
+    'roomId': roomId,
+    'ruleId': ruleId,
+    'totalMinor': totalMinor,
+    'splitType': type.id,
+    'participants': [
+      for (final p in participants) {'uid': p.uid, if (type != SplitType.equal) 'value': p.value},
+    ],
+  });
 
   // ---- settle up & comments ------------------------------------------------
 

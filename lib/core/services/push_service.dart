@@ -42,10 +42,12 @@ class PushService extends GetxService {
       _subs
         // ignore: deprecated_member_use
         ..add(messaging.onTokenRefresh.listen(_save))
-        ..add(FirebaseMessaging.onMessage.listen((m) {
-          final n = m.notification;
-          if (n != null) Ui.toast([n.title, n.body].whereType<String>().join('\n'));
-        }))
+        ..add(
+          FirebaseMessaging.onMessage.listen((m) {
+            final n = m.notification;
+            if (n != null) Ui.toast([n.title, n.body].whereType<String>().join('\n'));
+          }),
+        )
         ..add(FirebaseMessaging.onMessageOpenedApp.listen((m) => open(m.data)));
       final initial = await messaging.getInitialMessage();
       if (initial != null) open(initial.data);
@@ -58,10 +60,9 @@ class PushService extends GetxService {
     final uid = _uid;
     if (token == null || uid == null) return;
     _token = token;
-    await FirebaseFirestore.instance.doc('users/$uid').set(
-      {'fcmTokens': FieldValue.arrayUnion([token])},
-      SetOptions(merge: true),
-    );
+    await FirebaseFirestore.instance.doc('users/$uid').set({
+      'fcmTokens': FieldValue.arrayUnion([token]),
+    }, SetOptions(merge: true));
   }
 
   /// Removes this device's token on sign-out.

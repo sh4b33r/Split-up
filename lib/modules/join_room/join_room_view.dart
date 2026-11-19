@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../app/routes/app_routes.dart';
 import '../../core/services/api.dart';
 import '../../core/utils/ui.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/widgets.dart';
 
 /// One join screen for all three ways in: a typed room code, an invite link
@@ -98,6 +99,18 @@ class _CodeEntry extends GetView<JoinRoomController> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        FloatingIcon(
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(Icons.vpn_key_rounded, color: theme.colorScheme.onPrimaryContainer, size: 30),
+          ),
+        ).pop(context),
+        const SizedBox(height: 18),
         Text('Enter the room code', style: theme.textTheme.headlineSmall),
         const SizedBox(height: 6),
         Text(
@@ -113,7 +126,10 @@ class _CodeEntry extends GetView<JoinRoomController> {
           textCapitalization: TextCapitalization.characters,
           autocorrect: false,
           enableSuggestions: false,
-          style: theme.textTheme.headlineMedium?.copyWith(letterSpacing: 10, fontFeatures: const [FontFeature.tabularFigures()]),
+          style: theme.textTheme.headlineMedium?.copyWith(
+            letterSpacing: 10,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
             TextInputFormatter.withFunction((o, n) => n.copyWith(text: n.text.toUpperCase())),
@@ -145,60 +161,83 @@ class _Preview extends GetView<JoinRoomController> {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(children: [
-              Container(
-                width: 84,
-                height: 84,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: theme.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(24)),
-                child: Text('${p['icon'] ?? '🏠'}', style: const TextStyle(fontSize: 42)),
-              ),
-              const SizedBox(height: 16),
-              Text('${p['name']}', style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
-              const SizedBox(height: 6),
-              Text('Owned by ${p['ownerName']}', style: muted),
-              const SizedBox(height: 2),
-              Text('$count ${count == 1 ? 'member' : 'members'} · ${p['currency']}', style: muted),
-            ]),
+            child: Column(
+              children: [
+                FloatingIcon(
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Text('${p['icon'] ?? '🏠'}', style: const TextStyle(fontSize: 42)),
+                  ),
+                ).pop(context),
+                const SizedBox(height: 16),
+                Text(
+                  '${p['name']}',
+                  style: theme.textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ).enter(context, delay: const Duration(milliseconds: 120)),
+                const SizedBox(height: 6),
+                Text('Owned by ${p['ownerName']}', style: muted),
+                const SizedBox(height: 2),
+                Text('$count ${count == 1 ? 'member' : 'members'} · ${p['currency']}', style: muted),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 20),
         Obx(() {
           if (controller.requested.value) {
-            return Column(children: [
-              Icon(Icons.hourglass_top, color: theme.colorScheme.primary, size: 32),
-              const SizedBox(height: 10),
-              Text('Request sent', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                "${p['ownerName']} needs to approve it. You'll get a notification when you're in.",
-                textAlign: TextAlign.center,
-                style: muted,
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(onPressed: () => Get.offAllNamed(Routes.home), child: const Text('Back to home')),
-              ),
-            ]);
+            return Column(
+              children: [
+                FloatingIcon(child: Icon(Icons.hourglass_top_rounded, color: theme.colorScheme.primary, size: 36))
+                    .pop(context),
+                const SizedBox(height: 10),
+                Text('Request sent', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  "${p['ownerName']} needs to approve it. You'll get a notification when you're in.",
+                  textAlign: TextAlign.center,
+                  style: muted,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.offAllNamed(Routes.home),
+                    child: const Text('Back to home'),
+                  ),
+                ),
+              ],
+            );
           }
-          return Column(children: [
-            BusyButton(
-              label: already ? 'Open room' : (approval ? 'Request to join' : 'Join room'),
-              busy: controller.busy.value,
-              onPressed: controller.join,
-            ),
-            if (approval && !already)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text('The owner approves new members in this room.', style: muted, textAlign: TextAlign.center),
+          return Column(
+            children: [
+              BusyButton(
+                label: already ? 'Open room' : (approval ? 'Request to join' : 'Join room'),
+                busy: controller.busy.value,
+                onPressed: controller.join,
               ),
-            if (!controller.fromLink)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: TextButton(onPressed: controller.reset, child: const Text('Try a different code')),
-              ),
-          ]);
+              if (approval && !already)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    'The owner approves new members in this room.',
+                    style: muted,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              if (!controller.fromLink)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: TextButton(onPressed: controller.reset, child: const Text('Try a different code')),
+                ),
+            ],
+          );
         }),
       ],
     );

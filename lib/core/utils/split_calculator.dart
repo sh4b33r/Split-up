@@ -14,8 +14,7 @@ enum SplitType {
   final String id;
   final String label;
 
-  static SplitType fromId(String? id) =>
-      SplitType.values.firstWhere((t) => t.id == id, orElse: () => SplitType.equal);
+  static SplitType fromId(String? id) => SplitType.values.firstWhere((t) => t.id == id, orElse: () => SplitType.equal);
 }
 
 class ParticipantInput {
